@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 import numpy as np
-from autogluon.task.tabular_prediction.tabular_prediction import TabularPrediction as task
+from autogluon.autogluon.task import TabularPrediction as task
 from autogluon.utils.tabular.utils.loaders import load_pd
 from autogluon.utils.tabular.utils.savers import save_pd
 
