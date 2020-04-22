@@ -1,3 +1,12 @@
+# WARNING: This repo is OUTDATED! Please go to https://github.com/Innixma/autogluon-benchmarking for the full results.
+
+
+
+
+
+
+
+
 # AutoGluon AutoML Benchmark Results
 
 Results for AutoGluon Benchmarks (see report/results.csv and report/results_openml_autogluon_8c1h.csv)
