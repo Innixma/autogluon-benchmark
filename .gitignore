@@ -127,3 +127,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# editors/IDEs
+.idea/
+*.iml
+*.swp
+
+AutogluonModels/
+tmp/
+dask-worker-space/
+catboost_info/
