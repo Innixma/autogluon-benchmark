@@ -2,7 +2,7 @@ import openml
 from autogluon.task import TabularPrediction as ag_task
 from autogluon.utils.tabular.utils.loaders import load_pd
 from autogluon.utils.tabular.utils.savers import save_pd
-from autogluon_benchmarking.tasks import task_utils
+from autogluon_benchmark.tasks import task_utils
 import numpy as np
 
 
