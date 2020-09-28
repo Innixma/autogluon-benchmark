@@ -1,30 +1,7 @@
 import openml
-from autogluon.task import TabularPrediction as ag_task
-from autogluon.utils.tabular.utils.loaders import load_pd
-from autogluon.utils.tabular.utils.savers import save_pd
 
-
-def run_ag(X_train, y_train, X_test, y_test, label, ag_args=None):
-    if ag_args is None:
-        ag_args = {}
-    X_train[label] = y_train
-    X_test[label] = y_test
-
-    X_train = X_train.copy()
-    X_test = X_test.copy()
-
-    # print(X_train)
-    # print(X_test)
-
-    predictor = ag_task.fit(
-        train_data=X_train,
-        label=label,
-        **ag_args,
-    )
-
-    X_test = X_test.reset_index(drop=True)  # TODO: FIXME SO THIS ISN'T NECESSARY!
-    # predictor.leaderboard(X_test)
-    return predictor
+from ..frameworks.autogluon.run import run
+from ..utils.data_utils import convert_to_raw
 
 
 def get_task(task_id: int):
@@ -37,7 +14,7 @@ def get_dataset(task):
     return X, y
 
 
-def run_task(task, n_folds=None, n_repeats=1, n_samples=1, ag_args=None):
+def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None):
     if isinstance(task, int):
         task = openml.tasks.get_task(task)
 
@@ -50,7 +27,7 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, ag_args=None):
         n_samples = n_samples_full
 
     X, y, _, _ = task.get_dataset().get_data(task.target_name)
-    X, y = convert_to_raw(X, y)
+    X = convert_to_raw(X)
     predictors = []
     scores = []
     for repeat_idx in range(n_repeats):
@@ -74,23 +51,10 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, ag_args=None):
                                     )
                                 )
 
-                # Save and load data to remove any pre-set dtypes, we want to observe performance from worst-case scenario: raw csv
-                predictor = run_ag(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, label=task.target_name, ag_args=ag_args)
+                # Save and get_task_dict data to remove any pre-set dtypes, we want to observe performance from worst-case scenario: raw csv
+                predictor = run(X_train=X_train, y_train=y_train, label=task.target_name, fit_args=fit_args)
                 predictors.append(predictor)
                 X_test[task.target_name] = y_test
                 scores.append(predictor.evaluate(X_test))
 
     return predictors, scores
-
-
-# Remove custom type information
-def convert_to_raw(X, y=None):
-    train_path = 'tmp/openml/tmp.csv'
-    if y is not None:
-        X['__TMP_LABEL__'] = y
-    save_pd.save(path=train_path, df=X)
-    X = load_pd.load(path=train_path)
-    if y is not None:
-        y = X['__TMP_LABEL__']
-        X.drop('__TMP_LABEL__', axis=1, inplace=True)
-    return X, y

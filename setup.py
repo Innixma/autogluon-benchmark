@@ -6,6 +6,7 @@ requirements = [
     'pyarrow',
     'autogluon',
     'mxnet',
+    'yaml',
 ]
 
 setup(
