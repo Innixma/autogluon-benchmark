@@ -3,8 +3,8 @@ from io import StringIO
 import pandas as pd
 from pandas import DataFrame, Series
 
-from autogluon.tabular.utils.features.feature_metadata import FeatureMetadata
-from autogluon.tabular.utils.ml.utils import infer_problem_type
+from autogluon.tabular.features.feature_metadata import FeatureMetadata
+from autogluon.tabular.utils import infer_problem_type
 
 
 def get_data_metadata(X: DataFrame, y: Series) -> dict:
