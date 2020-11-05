@@ -4,7 +4,7 @@ requirements = [
     's3fs',
     'autogluon',
     'mxnet',
-    'yaml',
+    'pyyaml',
 ]
 
 setup(
