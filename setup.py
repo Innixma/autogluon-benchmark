@@ -1,9 +1,7 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    'kaggle',
     's3fs',
-    'pyarrow',
     'autogluon',
     'mxnet',
     'yaml',
