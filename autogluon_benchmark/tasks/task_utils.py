@@ -1,4 +1,7 @@
 import openml
+import time
+
+from openml.exceptions import OpenMLServerException
 
 from ..frameworks.autogluon.run import run
 from ..utils.data_utils import convert_to_raw
@@ -16,7 +19,21 @@ def get_dataset(task):
 
 def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None, print_leaderboard=True):
     if isinstance(task, int):
-        task = openml.tasks.get_task(task)
+        task_id = task
+        delay_exp = 0
+        while True:
+            try:
+                task = openml.tasks.get_task(task_id)
+            except OpenMLServerException as e:
+                delay = 2 ** delay_exp
+                delay_exp += 1
+                if delay_exp > 10:
+                    raise ValueError("Unable to get task after 10 retries")
+                print(e)
+                print(f'Retry in {delay}s...')
+                time.sleep(delay)
+                continue
+            break
 
     n_repeats_full, n_folds_full, n_samples_full = task.get_split_dimensions()
     if n_folds is None:
