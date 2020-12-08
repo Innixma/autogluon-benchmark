@@ -14,7 +14,7 @@ def get_dataset(task):
     return X, y
 
 
-def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None):
+def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None, print_leaderboard=True):
     if isinstance(task, int):
         task = openml.tasks.get_task(task)
 
@@ -56,5 +56,7 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None):
                 predictors.append(predictor)
                 X_test[task.target_name] = y_test
                 scores.append(predictor.evaluate(X_test))
+                if print_leaderboard:
+                    predictor.leaderboard(X_test)
 
     return predictors, scores
