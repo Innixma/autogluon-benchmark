@@ -29,19 +29,23 @@ cd ..
 
 python autogluon-benchmark/examples/train_suite_hpo_small.py
 
-# Run old that works
+echo "Mainline finished"
+
+# Run PR 808
 
 cd autogluon
-git checkout origin/tabular_ag_args_option
+git remote add RuohanW https://github.com/RuohanW/autogluon
+git fetch RuohanW
+git checkout --track RuohanW/hyperband_dt
 cd ..
 python autogluon-benchmark/examples/train_suite_hpo_small.py
 
+echo "PR 808 finished"
 
 ####################
 # Revert to master
 cd autogluon
 git checkout origin/master
 cd ..
-
 
 exit 0
