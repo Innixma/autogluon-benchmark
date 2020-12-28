@@ -47,8 +47,10 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None, print_
     X = convert_to_raw(X)
     predictors = []
     scores = []
+    if isinstance(n_folds, int):
+        n_folds = list(range(n_folds))
     for repeat_idx in range(n_repeats):
-        for fold_idx in range(n_folds):
+        for fold_idx in n_folds:
             for sample_idx in range(n_samples):
                 train_indices, test_indices = task.get_train_test_split_indices(
                     repeat=repeat_idx,
