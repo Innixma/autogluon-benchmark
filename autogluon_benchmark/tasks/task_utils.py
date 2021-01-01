@@ -23,7 +23,9 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None, print_
         delay_exp = 0
         while True:
             try:
+                print(f'Getting task {task_id}')
                 task = openml.tasks.get_task(task_id)
+                print(f'Got task {task_id}')
             except OpenMLServerException as e:
                 delay = 2 ** delay_exp
                 delay_exp += 1
@@ -44,7 +46,7 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None, print_
         n_samples = n_samples_full
 
     X, y, _, _ = task.get_dataset().get_data(task.target_name)
-    X = convert_to_raw(X)
+    # X = convert_to_raw(X)
     predictors = []
     scores = []
     if isinstance(n_folds, int):
