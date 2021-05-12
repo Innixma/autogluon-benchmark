@@ -17,7 +17,7 @@ def get_dataset(task):
     return X, y
 
 
-def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None, print_leaderboard=True):
+def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_args=None, print_leaderboard=True):
     if isinstance(task, int):
         task_id = task
         delay_exp = 0
@@ -73,10 +73,10 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, fit_args=None, print_
                                 )
 
                 # Save and get_task_dict data to remove any pre-set dtypes, we want to observe performance from worst-case scenario: raw csv
-                predictor = run(X_train=X_train, y_train=y_train, label=task.target_name, fit_args=fit_args)
+                predictor = run(X_train=X_train, y_train=y_train, label=task.target_name, init_args=init_args, fit_args=fit_args)
                 predictors.append(predictor)
                 X_test[task.target_name] = y_test
-                scores.append(predictor.evaluate(X_test))
+                scores.append(predictor.evaluate(X_test)[predictor.eval_metric.name])
                 if print_leaderboard:
                     predictor.leaderboard(X_test)
 
