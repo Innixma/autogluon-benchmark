@@ -39,7 +39,7 @@ if __name__ == '__main__':
                         default='ec2/2021_06_08_holdout', nargs='?')
     parser.add_argument('suffix', type=str, help='Suffix in aggregated results csv name',
                         default='_1h8c', nargs='?')
-    parser.add_argument('contains', type=str, help='Version naming of csv in save path',
+    parser.add_argument('contains', type=str, help='Results must contain this term',
                         default='.1h8c.', nargs='?')
     parser.add_argument('results_prefix', type=str, help='Name of folder one level above where results csv are saved',
                         default='', nargs='?')
