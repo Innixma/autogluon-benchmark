@@ -37,7 +37,7 @@ def aggregate_leaderboards(path_prefix: str, contains=None):
         else:
             # scores = scores[scores['fold'] == 0]
             print(scores)
-            scores = scores[['id', 'task', 'framework', 'constraint', 'fold', 'metric', 'mode', 'version', 'params', 'app_version', 'utc', 'seed']]
+            scores = scores[['id', 'task', 'framework', 'constraint', 'fold', 'type', 'metric', 'mode', 'version', 'params', 'app_version', 'utc', 'seed']]
             scores = scores.rename(columns={'framework': 'framework_parent'})
 
             best_compressed = leaderboard[leaderboard['model'].str.contains('_FULL')]

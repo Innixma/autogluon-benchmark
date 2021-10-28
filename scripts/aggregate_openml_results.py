@@ -36,18 +36,18 @@ def aggregate_from_params(s3_bucket, s3_prefix, version_name, suffix, contains, 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('s3_bucket', type=str, help="Name of S3 bucket that results to aggregate get outputted to",
+    parser.add_argument('--s3_bucket', type=str, help="Name of S3 bucket that results to aggregate get outputted to",
                         default='automl-benchmark-ag', nargs='?')
-    parser.add_argument('s3_prefix', type=str, help='Prefix for path to results needing aggregation', default='', nargs='?')
-    parser.add_argument('version_name', type=str, help='Root folder name in EC2 of results',
+    parser.add_argument('--s3_prefix', type=str, help='Prefix for path to results needing aggregation', default='', nargs='?')
+    parser.add_argument('--version_name', type=str, help='Root folder name in EC2 of results',
                         default='ec2/2021_06_08_holdout', nargs='?')
-    parser.add_argument('suffix', type=str, help='Suffix in aggregated results csv name',
+    parser.add_argument('--suffix', type=str, help='Suffix in aggregated results csv name',
                         default='_1h8c', nargs='?')
-    parser.add_argument('contains', type=str, help='Results must contain this term',
+    parser.add_argument('--contains', type=str, help='Results must contain this term',
                         default='.1h8c.', nargs='?')
-    parser.add_argument('results_prefix', type=str, help='Name of folder one level above where results csv are saved',
+    parser.add_argument('--results_prefix', type=str, help='Name of folder one level above where results csv are saved',
                         default='', nargs='?')
-    parser.add_argument('save_path_str_replace_dict', type=str, help='Dictionary in string form of string values to replace(dict key) with another string value(dict value)',
+    parser.add_argument('--save_path_str_replace_dict', type=str, help='Dictionary in string form of string values to replace(dict key) with another string value(dict value)',
                         default="{\'_ec2/\': \'_\'}", nargs='?')
 
     args = parser.parse_args()
