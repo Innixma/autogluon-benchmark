@@ -30,7 +30,7 @@ def terminate_stopped_ec2_amlb(region='us-east-1', dry_run=True):
     terminating_instance_count = len(instances_to_terminate)
     print(f'Total Instances        : {total_instance_count}')
     print(f'Stopped Instances      : {stopped_instance_count}')
-    print(f'Stopped AMLB Instances : {instances_to_terminate}')
+    print(f'Stopped AMLB Instances : {len(instances_to_terminate)}')
     print(f'Terminating {terminating_instance_count} stopped AMLB instances in 20 seconds (kill process to abort!)')
     if dry_run:
         print('DRY RUN... INSTANCES WILL NOT BE TERMINATED')
