@@ -64,12 +64,13 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
     # Ensure :latest is added so it uses custom branch instead of pip install.
     python $PROJECT_PATH/runbenchmark.py AutoGluon:latest test -s force
     ```
+    
 8. Advanced: Run a distributed benchmark test of AutoGluon on AWS
    1. First ensure you have a fork and new branch of automlbenchmark, various changes must be made to this branch.
    2. Edit `automlbenchmark/resources/config.yaml`, changing the following lines and keep the rest untouched:
    
      ```yaml
-
+   
      ---
      project_repository: https://github.com/MY_GIT_USER/automlbenchmark#MY_AUTOMLBENCHMARK_BRANCH_NAME
      max_parallel_jobs: 2000  # 2000 so we effectively don't have a limit on parallel EC2 instances
@@ -105,6 +106,7 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
    # python $PROJECT_PATH/runbenchmark.py AutoGluon_bestquality:latest test -m aws -p 10
    ```
    Once started, you should see the instances start up on EC2. Results will be saved to S3 in your `$bucket/$root_key` location specified in `config.yaml`.
+   
 9. Advanced: Run in parallel the full AutoML Benchmark with custom AutoGluon branch (4160 machines, 10400 hrs of m5.2xlarge compute)
    1. Copy `ag.yaml` into your automlbenchmark branch: https://github.com/Innixma/automlbenchmark/blob/ag-2021_03_28/resources/benchmarks/ag.yaml
    2. Commit and Push
@@ -125,7 +127,50 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
    # python $PROJECT_PATH/runbenchmark.py AutoGluon:latest ag 1h8c -m aws -p 1500
    # python $PROJECT_PATH/runbenchmark.py AutoGluon:latest ag 4h8c -m aws -p 1500
    ```
-10. Aggregate AWS S3 results.
-    1. WIP
-11. Analyze aggregated results.
-    1. WIP
+   
+10. Advanced: Run distributed benchmark on your custom datasets on AWS
+
+    1. Prepare your datasets in s3 bucket with the following prefix: `arn:aws:s3:::automl-benchmark-*/ec2/*`. If you plan to have multiple folds, put them into separate files.
+
+    2. Create your custom benchmark yaml file under `automlbenchmark/resources/`, for example `custom_test.yaml`
+
+    3. Example benchmark yaml file:
+
+        ```yaml
+        - name: custom_dataset1
+          dataset:
+            train: 
+              - 's3://automl-benchmark-xxx/ec2/custom_datasets/train0.csv'
+              - 's3://automl-benchmark-xxx/ec2/custom_datasets/train1.csv'
+              - 's3://automl-benchmark-xxx/ec2/custom_datasets/train2.csv'
+            test: 
+              - 's3://automl-benchmark-xxx/ec2/custom_datasets/test0.csv'
+              - 's3://automl-benchmark-xxx/ec2/custom_datasets/test1.csv'
+              - 's3://automl-benchmark-xxx/ec2/custom_datasets/test2.csv'
+            target: class # This is the label to be predicted
+          folds: 3
+        
+        ```
+
+    4. Follow previous guide for running distributed benchmark on AWS. Remember to push and commit your changes.
+
+    5. To run the benchmark:
+
+       ```
+       mkdir -p benchmark_tmp
+       cd benchmark_tmp
+       # Run full benchmark suite (1h8c) on AWS, fully parallel, on AutoGluon custom branch / master with 'best_quality' preset
+       # Consider adding -f 0 to reduce compute by 10x (only train 1 fold instead of all 10), lowers confidence in results, but cheaper and faster.
+       # If you want to run on stable release of AutoGluon, remove :latest
+       # -p 1500 is just an example, change it to whatever suites your own benchmark
+       # python $PROJECT_PATH/runbenchmark.py AutoGluon_bestquality:latest custom_test 1h8c -m aws -p 1500
+       ```
+
+       
+
+11. Aggregate AWS S3 results.
+
+     1. WIP
+
+12. Analyze aggregated results.
+     1. WIP
