@@ -166,8 +166,6 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
        # python $PROJECT_PATH/runbenchmark.py AutoGluon_bestquality:latest custom_test 1h8c -m aws -p 1500
        ```
 
-       
-
 11. Aggregate AWS S3 results.
 
      1. WIP
