@@ -35,4 +35,4 @@ rsync --delete -av $MYDIR/* $REMOTE_BOX:$REMOTE_SCRIPT_PATH/
 
 # FIXME: Figure out how to run this with logs still in place / viewable. Maybe screen?
 #  https://unix.stackexchange.com/questions/479/keep-processes-running-after-ssh-session-disconnects
-ssh $REMOTE_BOX nohup $REMOTE_SCRIPT_PATH/run_benchmarks_local.sh &
+ssh $REMOTE_BOX $REMOTE_SCRIPT_PATH/run_benchmarks_local_nohup.sh

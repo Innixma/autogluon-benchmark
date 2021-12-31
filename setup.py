@@ -3,7 +3,6 @@ from setuptools import setup, find_packages
 requirements = [
     's3fs',
     'autogluon',
-    'mxnet',
     'pyyaml',
 ]
 
