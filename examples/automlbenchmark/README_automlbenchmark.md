@@ -1,10 +1,46 @@
 This README provides instructions to run AutoGluon on AutoML Benchmark
 
+# Note
+
+These instructions are fairly complicated due to nuances in how AutoMLBenchmark works 
+and its lack of native support for benchmarking forks/branches of AutoML Frameworks.
+
+If you only care about benchmarking official releases of AutoGluon with other AutoML Frameworks on the original 39 datasets, 
+then you are best served referring to the official AutoMLBenchmark readme: https://github.com/openml/automlbenchmark
+
+If you care about benchmarking a modified version of AutoGluon (or any AutoML framework), such as an in-progress PR, 
+then the steps below are NECESSARY.
+
+## Note on running the full benchmark
+
+Please be aware that **the full AutoMLBenchmark is extremely resource intensive**. 
+It consists of 1040 datasets (104 datasets with 10-fold CV), each of which are trained for 5 hours per framework.
+This means each framework requires 5200 hours of compute for a single benchmark. 
+Assuming a standard AWS account that can run 10 EC2 instances at once, **this would take 9 days to finish, costing $1996.80 in compute** (using On-Demand AWS pricing).
+
+While we plan to make a light-weight version of the benchmark for users to experiment with, this is not yet finished.
+
+### Ways to cut down on price:
+
+#### 1. Use `-f 0` in the `runbenchmark.py` command.
+
+This will cut down on compute by 10x by only doing the first fold in the 10-fold CV instead of all 10.
+
+5200 hrs -> 520 hrs
+
+#### 2. Only run 1 hour benchmarks, ignore 4 hour benchmarks.
+
+This will cut down on compute by 5x by only training for 1 hour instead of 5.
+
+520 hrs -> 104 hrs
+
+# Instructions
+
 Option 1: Copy existing fork
 
 1. Fork/Copy an existing working branch and edit slightly to make it work.
     1. Downside: May be out-of-date with automlbenchmark mainline or have other changes you don't want.
-    2. Example forked branch: https://github.com/Innixma/automlbenchmark/tree/ag-2021_03_28
+    2. Example forked branch: https://github.com/Innixma/automlbenchmark/tree/ag-2021_12_21
     3. If using this method, still refer to Option 2 Part 7+ to ensure the files are correct. You will still need to make code edits.
 
 Option 2: From scratch
@@ -80,15 +116,15 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
        region: 'us-east-1'  # us-east-1 or whatever region you plan to launch instances
        s3:
          bucket: YOUR_S3_BUCKET_NAME  # make the bucket in S3 first, specify a new one to isolate runs from other users (requires creation)
-         root_key: ec2/2021_03_28/  # subdirectory in bucket where results are saved, try to keep in sync with what you are testing
+         root_key: ec2/2021_12_21/  # subdirectory in bucket where results are saved, try to keep in sync with what you are testing
                                     # avoid re-using between multiple runs as it is easy to confuse which results are from what experiment
        ec2:
          volume_type: gp2  # standard is very slow, prefer gp2
        max_timeout_seconds: 72000  # just to avoid any strange timeouts
        overhead_time_seconds: 28800  # just to avoid any strange timeouts
      ```
-   3. Edit `automlbenchmark/resources/constraints.yaml`, changing the `min_vol_size_mb` to `500000` in all cases.
-      - This allows 500 GB of space for each instance, enough to avoid OOD errors.
+   3. Edit `automlbenchmark/resources/constraints.yaml`, changing the `min_vol_size_mb` to `100000` in all cases.
+      - This allows 100 GB of space for each instance, enough to avoid OOD errors.
    4. Do the edits in part 7 if they weren't already done.
    5. Commit and push the change so it is available on github.
    6. Create an EC2 instance that will act as the main node that launches and keeps track of all other instances.
@@ -108,7 +144,7 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
    Once started, you should see the instances start up on EC2. Results will be saved to S3 in your `$bucket/$root_key` location specified in `config.yaml`.
    
 9. Advanced: Run in parallel the full AutoML Benchmark with custom AutoGluon branch (4160 machines, 10400 hrs of m5.2xlarge compute)
-   1. Copy `ag.yaml` into your automlbenchmark branch: https://github.com/Innixma/automlbenchmark/blob/ag-2021_03_28/resources/benchmarks/ag.yaml
+   1. Copy `ag.yaml` into your automlbenchmark branch: https://github.com/Innixma/automlbenchmark/blob/ag-2021_12_21/resources/benchmarks/ag.yaml
    2. Commit and Push
    3. On EC2: fetch and pull
    4. On EC2:
