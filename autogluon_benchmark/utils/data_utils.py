@@ -3,7 +3,7 @@ from io import StringIO
 import pandas as pd
 from pandas import DataFrame, Series
 
-from autogluon.core.features.feature_metadata import FeatureMetadata
+from autogluon.common.features.feature_metadata import FeatureMetadata
 from autogluon.core.utils import infer_problem_type
 
 
