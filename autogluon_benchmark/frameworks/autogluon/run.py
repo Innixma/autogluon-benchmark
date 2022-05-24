@@ -24,6 +24,12 @@ ag_problem_type_map = {
     'Supervised Regression': 'regression',
 }
 
+ag_eval_metric_map = {
+    'binary': 'roc_auc',
+    'multiclass': 'log_loss',
+    'regression': 'rmse',
+}
+
 
 def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fit_args: dict = None, extra_kwargs: dict = None, problem_type=None):
     if init_args is None:
@@ -34,8 +40,10 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
         extra_kwargs = {}
     if problem_type is not None:
         init_args['problem_type'] = problem_type
-    X_train = X_train.copy()
-    X_train[label] = y_train
+    if 'eval_metric' not in init_args:
+        if init_args.get('problem_type', None):
+            init_args['eval_metric'] = ag_eval_metric_map[init_args['problem_type']]
+    X_train = pd.concat([X_train, y_train.to_frame(name=label)], axis=1)
 
     with Timer() as timer_fit:
         predictor = TabularPredictor(label=label, **init_args).fit(
@@ -56,8 +64,9 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
             predictions = predictor.predict(X_test, as_pandas=False)
         probabilities = None
 
-    X_test = X_test.copy()
-    X_test[label] = y_test
+    # X_test = X_test.copy()
+    # X_test[label] = y_test
+    X_test = pd.concat([X_test, y_test.to_frame(name=label)], axis=1)
 
     eval_metric = predictor.eval_metric.name
     test_score = predictor.evaluate(X_test, silent=True, auxiliary_metrics=False)[eval_metric]
