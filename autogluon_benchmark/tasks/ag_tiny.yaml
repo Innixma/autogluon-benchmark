@@ -1,0 +1,46 @@
+---
+
+- name: wilt
+  openml_task_id: 146820
+
+- name: credit-g
+  openml_task_id: 168757
+
+- name: jasmine
+  openml_task_id: 168911
+
+- name: madeline
+  openml_task_id: 190392
+
+- name: eucalyptus
+  openml_task_id: 359954
+
+- name: qsar-biodeg
+  openml_task_id: 359956
+
+- name: pc4
+  openml_task_id: 359958
+
+- name: kc1
+  openml_task_id: 359962
+
+- name: segment
+  openml_task_id: 359963
+
+- name: Internet-Advertisements
+  openml_task_id: 359966
+
+- name: sylvine
+  openml_task_id: 359972
+
+- name: Satellite
+  openml_task_id: 359975
+
+- name: tecator
+  openml_task_id: 359934
+
+- name: MIP-2016-regression
+  openml_task_id: 359947
+
+- name: boston
+  openml_task_id: 359950

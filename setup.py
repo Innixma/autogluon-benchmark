@@ -1,6 +1,9 @@
 from setuptools import setup, find_packages
 
 requirements = [
+    'numpy',
+    'pandas',
+    'openml',
     's3fs',
     'autogluon',
     'pyyaml',

@@ -6,6 +6,8 @@ import yaml
 def get_task_dict(yaml_files=None):
     if yaml_files is None:
         yaml_files = ['ag.yaml']
+    elif isinstance(yaml_files, str):
+        yaml_files = [yaml_files]
     parent_dir = Path(__file__).resolve().parent
     task_dict_full = {}
     for yaml_file in yaml_files:
