@@ -1,5 +1,7 @@
 
+import argparse
 import time
+
 import boto3
 
 
@@ -46,6 +48,15 @@ def terminate_stopped_ec2_amlb(region='us-east-1', dry_run=True):
 
 
 if __name__ == '__main__':
-    terminate_stopped_ec2_amlb()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--region', type=str, help="Region to delete from", default='us-east-1', nargs='?')
+    parser.add_argument('--dry_run', type=bool, help='Whether it is a dry run', default=True, nargs='?')
+
+    args = parser.parse_args()
+
+    terminate_stopped_ec2_amlb(
+        region=args.region,
+        dry_run=args.dry_run,
+    )
     # Uncomment below line to terminate instances
     # terminate_stopped_ec2_amlb(dry_run=False)
