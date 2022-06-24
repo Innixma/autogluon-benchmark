@@ -50,7 +50,9 @@ def terminate_stopped_ec2_amlb(region='us-east-1', dry_run=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--region', type=str, help="Region to delete from", default='us-east-1', nargs='?')
-    parser.add_argument('--dry_run', type=bool, help='Whether it is a dry run', default=True, nargs='?')
+    parser.add_argument('--dry_run', action='store_true')
+    parser.add_argument('--no-dry_run', dest='dry_run', action='store_false')
+    parser.set_defaults(dry_run=True)
 
     args = parser.parse_args()
 
