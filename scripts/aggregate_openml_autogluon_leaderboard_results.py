@@ -21,8 +21,11 @@ def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True):
     df_full = []
     num_paths = len(paths_full)
     columns_to_keep = ['id', 'task', 'framework', 'constraint', 'fold', 'type', 'metric', 'mode', 'version', 'params', 'app_version', 'utc', 'seed']
+
     if not keep_params:
         columns_to_keep.remove('params')
+    print(keep_params)
+    print(columns_to_keep)
 
     for i, path in enumerate(paths_full):
         print(f'{i+1}/{num_paths} | {path}')
