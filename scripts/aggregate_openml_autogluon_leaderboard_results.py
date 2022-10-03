@@ -102,8 +102,9 @@ if __name__ == '__main__':
     parser.add_argument('--s3_prefix', type=str, help='Prefix for path to results needing aggregation', default='ec2/', nargs='?')
     parser.add_argument('--version_name', type=str, help='Root folder name in EC2 of results', nargs='?')
     parser.add_argument('--constraint', type=str, help='Name of constraint used in benchmark', default='1h8c', nargs='?')
-    parser.add_argument('--keep_params', type=bool, help='Whether to keep the params column, dropping reduces file size', default=True, nargs='?')
-
+    parser.add_argument('--keep_params', action='store_true')
+    parser.add_argument('--no-keep_params', dest='keep_params', action='store_false')
+    parser.set_defaults(keep_params=True)
     args = parser.parse_args()
 
     aggregate_leaderboards_from_params(
