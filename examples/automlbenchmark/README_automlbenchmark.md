@@ -130,6 +130,7 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
    6. Create an EC2 instance that will act as the main node that launches and keeps track of all other instances.
       - Ensure this is at least an m5.2xlarge with 500 GB of disk in main partition.
       - Ensure this EC2 instance has the ability to access S3 and create/delete other EC2 instances. (EC2 Admin level permissions)
+        - For the AutoGluon AWS account, this is the `EC2Admin` role.
       - This instance will not train models, but Deep Learning AMI worked fine for me.
    7. Git clone your forked branch of automlbenchmark to the EC2 instance and make a virtual environment + install (Redo steps 2-4)
    8. Test an AWS run:
@@ -155,7 +156,7 @@ python $PROJECT_PATH/runbenchmark.py AutoGluon test
    # DO NOT run all 4 of these at the same time, preferably do them sequentially.
    # Consider adding -f 0 to reduce compute by 10x (only train 1 fold instead of all 10), lowers confidence in results, but cheaper and faster.
    # Results should be available within 3-4 hours for 1h8c, and within 7-8 hours for 4h8c.
-   # If you want to run on stable release of AutoGluon, remove :latest
+   # If you want to run on stable release of AutoGluon, remove ":latest"
    # python $PROJECT_PATH/runbenchmark.py AutoGluon_bestquality:latest ag 1h8c -m aws -p 1500
    # with 4h8c
    # python $PROJECT_PATH/runbenchmark.py AutoGluon_bestquality:latest ag 4h8c -m aws -p 1500
