@@ -15,11 +15,15 @@ def get_s3_paths(path_prefix: str, contains=None, suffix=None):
     return paths_full
 
 
-def aggregate_leaderboards(path_prefix: str, contains=None):
+def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True):
     paths_full = get_s3_paths(path_prefix, contains=contains, suffix='/scores/results.csv')
 
     df_full = []
     num_paths = len(paths_full)
+    columns_to_keep = ['id', 'task', 'framework', 'constraint', 'fold', 'type', 'metric', 'mode', 'version', 'params', 'app_version', 'utc', 'seed']
+    if not keep_params:
+        columns_to_keep.remove('params')
+
     for i, path in enumerate(paths_full):
         print(f'{i+1}/{num_paths} | {path}')
         dataset_directory = path.rsplit('/', 2)[0]
@@ -38,7 +42,7 @@ def aggregate_leaderboards(path_prefix: str, contains=None):
         else:
             # scores = scores[scores['fold'] == 0]
             print(scores)
-            scores = scores[['id', 'task', 'framework', 'constraint', 'fold', 'type', 'metric', 'mode', 'version', 'params', 'app_version', 'utc', 'seed']]
+            scores = scores[columns_to_keep]
             scores = scores.rename(columns={'framework': 'framework_parent'})
 
             # best_compressed = leaderboard[leaderboard['model'].str.contains('_FULL')]
@@ -78,12 +82,12 @@ def aggregate_leaderboards(path_prefix: str, contains=None):
     return df_full
 
 
-def aggregate_leaderboards_from_params(s3_bucket, s3_prefix, version_name, constraint):
+def aggregate_leaderboards_from_params(s3_bucket, s3_prefix, version_name, constraint, keep_params=True):
     contains = f'.{constraint}.'
     result_path = f'{s3_prefix}{version_name}/'
     aggregated_results_name = f'results_ag_leaderboard_{constraint}_{version_name}.csv'
 
-    df = aggregate_leaderboards(path_prefix=f's3://{s3_bucket}/{result_path}', contains=contains)
+    df = aggregate_leaderboards(path_prefix=f's3://{s3_bucket}/{result_path}', contains=contains, keep_params=keep_params)
 
     save_pd.save(path=f's3://{s3_bucket}/aggregated/{result_path}{aggregated_results_name}', df=df)
 
@@ -95,6 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--s3_prefix', type=str, help='Prefix for path to results needing aggregation', default='ec2/', nargs='?')
     parser.add_argument('--version_name', type=str, help='Root folder name in EC2 of results', nargs='?')
     parser.add_argument('--constraint', type=str, help='Name of constraint used in benchmark', default='1h8c', nargs='?')
+    parser.add_argument('--keep_params', type=bool, help='Whether to keep the params column, dropping reduces file size', default=True, nargs='?')
 
     args = parser.parse_args()
 
@@ -103,4 +108,5 @@ if __name__ == '__main__':
         s3_prefix=args.s3_prefix,
         version_name=args.version_name,
         constraint=args.constraint,
+        keep_params=args.keep_params,
     )
