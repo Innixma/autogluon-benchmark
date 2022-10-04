@@ -103,3 +103,7 @@ tid,ttid,did,name,task_type,status,estimation_procedure,evaluation_measures,sour
 360932,TaskType.SUPERVISED_REGRESSION,3050,QSAR-TID-11,Supervised Regression,active,10-fold Crossvalidation,,3050,MEDIAN_PXC50,,,,0.0,1026.0,5742.0,0.0,0.0,1025.0,1.0,,,,,,,,
 360933,TaskType.SUPERVISED_REGRESSION,3277,QSAR-TID-10980,Supervised Regression,active,10-fold Crossvalidation,,3277,MEDIAN_PXC50,,,,0.0,1026.0,5766.0,0.0,0.0,1025.0,1.0,,,,,,,,
 360945,TaskType.SUPERVISED_REGRESSION,43071,MIP-2016-regression,Supervised Regression,active,10-fold Crossvalidation,root_mean_squared_error,43071,PAR10,,,,0.0,145.0,1090.0,0.0,0.0,144.0,1.0,,,,,,,,
+360115,TaskType.SUPERVISED_CLASSIFICATION,42759,KDDCup09-Upselling,Supervised Classification,active,10-fold Crossvalidation,area_under_roc_curve,42759,upselling,46318.0,,3682.0,2.0,15001.0,50000.0,50000.0,25108569.0,14811.0,1.0,,,,,,,,
+13854,TaskType.SUPERVISED_REGRESSION,3050,QSAR-TID-11,Supervised Regression,active,Custom 10-fold Crossvalidation,,3050,MEDIAN_PXC50,,,,0.0,1026.0,5742.0,0.0,0.0,1025.0,1.0,,,,,,,,
+14097,TaskType.SUPERVISED_REGRESSION,3277,QSAR-TID-10980,Supervised Regression,active,Custom 10-fold Crossvalidation,,3277,MEDIAN_PXC50,,,,0.0,1026.0,5766.0,0.0,0.0,1025.0,1.0,,,,,,,,
+359947,TaskType.SUPERVISED_REGRESSION,41702,MIP-2016-regression,Supervised Regression,active,10-fold Crossvalidation,root_mean_squared_error,41702,PAR10,,5.0,,0.0,148.0,1090.0,0.0,0.0,145.0,2.0,,,,,,,,

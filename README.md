@@ -13,3 +13,7 @@ Please note that these instructions are quite technical.
 To benchmark individual OpenML datasets, you can check out the examples in `examples/train_***`
 
 The scripts are fairly primitive. They mimic what AutoMLBenchmark does contained to a single dataset.
+
+## Generating Task Metadata
+
+To generate task metadata files, refer to autogluon_benchmark/data/metadata/README.md
