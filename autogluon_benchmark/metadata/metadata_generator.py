@@ -1,11 +1,11 @@
-from typing import Optional, List
+from typing import Union, List
 
 from autogluon.common.savers import save_pd
 import openml
 import pandas as pd
 
 
-def generate_metadata(study: Optional[int, List[int]]) -> pd.DataFrame:
+def generate_metadata(study: Union[int, List[int]]) -> pd.DataFrame:
     """
     Generates the OpenML metadata file for every task in a study.
     """
@@ -22,7 +22,7 @@ def generate_metadata(study: Optional[int, List[int]]) -> pd.DataFrame:
     return task_metadata
 
 
-def generate_and_save_metadata(path: str, study: Optional[int, List[int]]):
+def generate_and_save_metadata(path: str, study: Union[int, List[int]]):
     task_metadata = generate_metadata(study=study)
     save_pd.save(path=path, df=task_metadata)
 
