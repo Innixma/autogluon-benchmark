@@ -30,7 +30,7 @@ def get_ag_problem_type(task):
     return problem_type
 
 
-def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_args=None, print_leaderboard=True):
+def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_args=None, compile_args=None, print_leaderboard=True):
     if isinstance(task, int):
         task_id = task
         delay_exp = 0
@@ -96,6 +96,7 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_a
                     y_test=y_test,
                     init_args=init_args,
                     fit_args=fit_args,
+                    compile_args=compile_args,
                     problem_type=problem_type,
                 )
                 result.update(split_info)

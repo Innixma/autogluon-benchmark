@@ -13,6 +13,7 @@ def result(*,
            models_count=None,
            time_fit=None,
            time_predict=None,
+           time_compile=None,
            test_score=None,
            test_error=None,
            eval_metric=None,
@@ -31,11 +32,13 @@ ag_eval_metric_map = {
 }
 
 
-def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fit_args: dict = None, extra_kwargs: dict = None, problem_type=None):
+def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fit_args: dict = None, compile_args: dict = None, extra_kwargs: dict = None, problem_type=None):
     if init_args is None:
         init_args = {}
     if fit_args is None:
         fit_args = {}
+    if compile_args is None:
+        compile_args = {}
     if extra_kwargs is None:
         extra_kwargs = {}
     if problem_type is not None:
@@ -53,6 +56,10 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
 
     is_classification = predictor.problem_type in ['binary', 'multiclass']
 
+    with Timer() as timer_compile:
+        if len(compile_args) > 0:
+            compiler_configs = compile_args['compiler_configs']
+            predictor.compile_models('best', compiler_configs=compiler_configs)
     predictor.persist_models('best')
 
     if is_classification:
@@ -94,6 +101,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
         models_count=models_count,
         time_fit=timer_fit.duration,
         time_predict=timer_predict.duration,
+        time_compile=timer_compile.duration,
         # extra
         test_score=test_score,
         test_error=test_error,
