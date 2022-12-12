@@ -50,11 +50,13 @@ def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True):
 
             # best_compressed = leaderboard[leaderboard['model'].str.contains('_FULL')]
             # best_distilled = leaderboard[leaderboard['model'].str.contains('_d1')].sort_values('score_val', ascending=False).head(1)
+            best_model = leaderboard.sort_values('score_val', ascending=False).head(1)
             best_weighted = leaderboard[leaderboard['model'].str.contains('WeightedEnsemble_')].sort_values('score_val', ascending=False).head(1)
             best_nonweighted = leaderboard[~leaderboard['model'].str.contains('WeightedEnsemble_')].sort_values('score_val', ascending=False).head(1)
 
             # best_compressed['model'] = 'autogluon_compressed'
             # best_distilled['model'] = 'autogluon_distilled'
+            best_model['model'] = 'best'
             best_weighted['model'] = 'autogluon_ensemble'
             best_nonweighted['model'] = 'autogluon_single'
             # print(best_compressed)
@@ -63,6 +65,7 @@ def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True):
 
             combined = pd.concat([
                 leaderboard,
+                best_model,
                 best_weighted,
                 # best_compressed,
                 # best_distilled,
