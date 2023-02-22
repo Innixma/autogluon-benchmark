@@ -12,6 +12,7 @@ do
         --benchmark) BENCHMARK="$2";;
         --workspace) WORKSPACE_ROOT="$2";;
         --repo) REPO="$2";;
+        --custom_user_dir) CUSTOM_USER_DIR=$2;;
         --git_user) GIT_USER="$2";;
         --extra_args) EXTRA_ARGS="$2";;
         --nohup) NOHUP="true";;
@@ -50,6 +51,10 @@ if [ -z "$REPO" ] ; then
     # exit 1
 fi
 
+if [ -z "$CUSTOM_USER_DIR" ] ; then
+    echo "--custom_user_dir is not specified, using default..."
+fi
+
 if [ -z "$GIT_USER" ] ; then
     echo "--git_user is a required parameter (EX: --git_user Innixma)"
     exit 1
@@ -66,6 +71,7 @@ echo $CONSTRAINT
 echo $BENCHMARK
 echo $WORKSPACE_ROOT
 echo $REPO
+echo $CUSTOM_USER_DIR
 echo $GIT_USER
 echo $EXTRA_ARGS
 
@@ -89,10 +95,18 @@ pip3 install -r $REPO/requirements.txt
 mkdir -p run
 cd run
 
+if [ ! -z "$CUSTOM_USER_DIR" ] ; then
+    CUSTOM_USER_DIR_OG="../${REPO}/${CUSTOM_USER_DIR}"
+    CUSTOM_USER_DIR_NEW="${CUSTOM_USER_DIR}"
+    CUSTOM_USER_DIR="-u ${CUSTOM_USER_DIR_NEW}"
+    mkdir -p ${CUSTOM_USER_DIR_NEW}
+    cp -r ${CUSTOM_USER_DIR_OG} .
+fi
+
 echo "==================================="
 echo "Preparing to run framework $FRAMEWORK ..."
 echo "Working directory: $PWD"
-COMMAND_1="python ../$REPO/runbenchmark.py $FRAMEWORK $BENCHMARK $CONSTRAINT $EXTRA_ARGS"
+COMMAND_1="python ../$REPO/runbenchmark.py $FRAMEWORK $BENCHMARK $CONSTRAINT $CUSTOM_USER_DIR $EXTRA_ARGS"
 echo "Commands to run:"
 echo $COMMAND_1
 
@@ -100,7 +114,9 @@ echo "Executing commands for $FRAMEWORK"
 if [ -z "$NOHUP" ] ; then
   $COMMAND_1
 else
-  nohup $COMMAND_1 > log_${FRAMEWORK}_${BENCHMARK}_${CONSTRAINT}.file 2>&1 &
+  LOG_FILE_NAME="log_${FRAMEWORK}_${BENCHMARK}_${CONSTRAINT}.file"
+  LOG_FILE_NAME=$(echo "$LOG_FILE_NAME" | tr '/\' _)  # Remove / and \
+  nohup $COMMAND_1 > LOG_FILE_NAME 2>&1 &
 fi
 echo "Commands executed for $FRAMEWORK"
 echo "==================================="
