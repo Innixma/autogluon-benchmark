@@ -116,7 +116,7 @@ if [ -z "$NOHUP" ] ; then
 else
   LOG_FILE_NAME="log_${FRAMEWORK}_${BENCHMARK}_${CONSTRAINT}.file"
   LOG_FILE_NAME=$(echo "$LOG_FILE_NAME" | tr '/\' _)  # Remove / and \
-  nohup $COMMAND_1 > LOG_FILE_NAME 2>&1 &
+  nohup $COMMAND_1 > $LOG_FILE_NAME 2>&1 &
 fi
 echo "Commands executed for $FRAMEWORK"
 echo "==================================="
