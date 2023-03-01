@@ -9,77 +9,35 @@ from autogluon.common.loaders import load_pd, load_s3
 from autogluon.common.utils import s3_utils
 from autogluon.common.savers import save_pd
 
+from autogluon_benchmark import OutputContext
+
 
 @ray.remote
-def get_single_leaderboard_ray(path, path_leaderboard, path_infer_speed, columns_to_keep, with_infer_speed, i, num_paths):
-    return get_single_leaderboard(path, path_leaderboard, path_infer_speed, columns_to_keep, with_infer_speed, i, num_paths)
+def get_single_leaderboard_ray(output_context, columns_to_keep, with_infer_speed, i, num_paths):
+    return get_single_leaderboard(output_context, columns_to_keep, with_infer_speed, i, num_paths)
 
 
 def select_ray(paths_full, columns_to_keep, with_infer_speed):
     num_paths = len(paths_full)
-    paths_dict = fetch_path_files_batch(paths_full=paths_full, with_infer_speed=with_infer_speed)
+
+    if len(paths_full) == 0:
+        raise AssertionError('Empty paths_full!')
+
+    paths_dict = {path: OutputContext.from_result_path(path=path) for path in paths_full}
     print('starting ray...')
     # Create and execute all tasks in parallel
     if not ray.is_initialized():
         ray.init()
     results = []
     for i, path in enumerate(paths_dict):
-        path_leaderboard = paths_dict[path]['path_leaderboard']
-        path_infer_speed = paths_dict[path]['path_infer_speed']
+        output_context = paths_dict[path]
         results.append(get_single_leaderboard_ray.remote(
-            path, path_leaderboard, path_infer_speed, columns_to_keep, with_infer_speed, i, num_paths
+            output_context, columns_to_keep, with_infer_speed, i, num_paths
         ))
     result = ray.get(results)
     print('finished ray...')
     result = [r for r in result if r is not None]
     return result
-
-
-def fetch_path_files_batch(paths_full: List[str],
-                           with_infer_speed: bool,
-                           verbose: bool = True) -> Dict[str, Dict[str, List[str]]]:
-    paths_dict = dict()
-    num_paths = len(paths_full)
-
-    ts = time.time()
-    for i, path in enumerate(paths_full):
-        if verbose:
-            print_str = f'{i+1}/{num_paths} fetching paths...'
-            if i > 0:
-                time_taken = time.time() - ts
-                time_per_i = time_taken / i
-                time_left = time_per_i * (num_paths - i)
-                print_str += f' | ETA: {round(time_left, 2)}s ' \
-                             f'| {round(time_per_i, 3)}s per path ' \
-                             f'| {round(time_taken, 2)}s elapsed'
-            print(print_str)
-        path_keys = fetch_path_files(path=path, with_infer_speed=with_infer_speed)
-        if path_keys is not None:
-            paths_dict[path] = path_keys
-    return paths_dict
-
-
-def fetch_path_files(path: str, with_infer_speed: bool) -> Dict[str, List[str]]:
-    path_keys = {}
-    dataset_directory = path.rsplit('/', 2)[0] + '/'
-    suffix_to_search = ['leaderboard.csv']
-    if with_infer_speed:
-        suffix_to_search.append('infer_speed.csv')
-    path_available = get_s3_paths(dataset_directory, suffix=suffix_to_search)
-    path_leaderboard = [p for p in path_available if p.endswith('leaderboard.csv')]
-    if len(path_leaderboard) != 1:
-        print(f'MISS LEADERBOARD: {dataset_directory}')
-        return None
-    else:
-        path_leaderboard = path_leaderboard[0]
-        path_keys['path_leaderboard'] = path_leaderboard
-    if with_infer_speed:
-        path_infer_speed = [p for p in path_available if p.endswith('infer_speed.csv')]
-        if len(path_infer_speed) != 1:
-            print(f'MISS INFER SPEED: {dataset_directory}')
-            return None
-        path_keys['path_infer_speed'] = path_infer_speed[0]
-    return path_keys
 
 
 def get_s3_paths(path_prefix: str, contains=None, suffix=None):
@@ -89,15 +47,15 @@ def get_s3_paths(path_prefix: str, contains=None, suffix=None):
     return paths_full
 
 
-def get_single_leaderboard(path, path_leaderboard, path_infer_speed, columns_to_keep, with_infer_speed, i, num_paths):
-    print(f'{i + 1}/{num_paths} | {path}')
-    dataset_directory = path.rsplit('/', 2)[0]
-    scores = load_pd.load(path)
+def get_single_leaderboard(output_context: OutputContext, columns_to_keep, with_infer_speed, i, num_paths):
+    print(f'{i + 1}/{num_paths} | {output_context.path}')
+    dataset_directory = output_context.path
+    scores = load_pd.load(output_context.path_result)
     try:
-        leaderboard = load_pd.load(path_leaderboard)
+        leaderboard = load_pd.load(output_context.path_leaderboard)
         leaderboard = leaderboard.drop(columns=['features'], errors='ignore')
         if with_infer_speed:
-            leaderboard = merge_with_infer_speed(leaderboard=leaderboard, dataset_directory=dataset_directory, path_infer_speed=path_infer_speed)
+            leaderboard = merge_with_infer_speed(leaderboard=leaderboard, dataset_directory=dataset_directory, path_infer_speed=output_context.path_infer_speed)
     except Exception:
         return None
     else:
@@ -142,7 +100,7 @@ def get_single_leaderboard(path, path_leaderboard, path_infer_speed, columns_to_
 
 
 def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True, with_infer_speed=False):
-    paths_full = get_s3_paths(path_prefix, contains=contains, suffix='/scores/results.csv')
+    paths_full = get_s3_paths(path_prefix, contains=contains, suffix='scores/results.csv')
     columns_to_keep = ['id', 'task', 'framework', 'constraint', 'fold', 'type', 'metric', 'mode', 'version', 'params', 'app_version', 'utc', 'seed']
 
     if not keep_params:
@@ -191,6 +149,7 @@ def merge_with_infer_speed(leaderboard, dataset_directory, path_infer_speed=None
 
 
 def aggregate_leaderboards_from_params(s3_bucket, s3_prefix, version_name, constraint, keep_params=True, with_infer_speed=False):
+    ts = time.time()
     contains = f'.{constraint}.'
     result_path = f'{s3_prefix}{version_name}/'
     aggregated_results_name = f'results_ag_leaderboard_{constraint}_{version_name}.csv'
@@ -204,6 +163,8 @@ def aggregate_leaderboards_from_params(s3_bucket, s3_prefix, version_name, const
     save_pd.save(path=save_path, df=df)
 
     print(f'Success! Saved output to "{save_path}"')
+    te = time.time()
+    print(f'Total Time Taken: {round(te-ts, 2)}s')
 
 
 if __name__ == '__main__':
@@ -221,14 +182,14 @@ if __name__ == '__main__':
     parser.set_defaults(with_infer_speed=False)
 
     # parser.set_defaults(version_name="2022_11_14_v06")
-    # parser.set_defaults(version_name="2023_02_20_bool_test")
+    parser.set_defaults(version_name="2023_02_27_zs")
     args = parser.parse_args()
 
     aggregate_leaderboards_from_params(
         s3_bucket=args.s3_bucket,
         s3_prefix=args.s3_prefix,
         version_name=args.version_name,
-        constraint=args.constraint,
-        keep_params=args.keep_params,
+        constraint='24h64c',
+        keep_params=False,
         with_infer_speed=args.with_infer_speed,
     )
