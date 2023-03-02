@@ -68,6 +68,22 @@ class OutputSuiteContext:
     def num_contexts(self):
         return len(self.output_contexts)
 
+    def _loop_func(self, func, input_list: list, kwargs=None) -> list:
+        if len(input_list) == 0:
+            return []
+        process_func = _with_ray if self.mode == 'ray' else _with_seq
+        return process_func(func=func, input_list=input_list, kwargs=kwargs)
+
+    def load_results(self) -> List[pd.DataFrame]:
+        return self._loop_func(func=OutputContext.load_results,
+                               input_list=self.output_contexts,
+                               kwargs=dict(include_infer_speed=self.include_infer_speed))
+
+    def aggregate_results(self) -> pd.DataFrame:
+        results_list = self.load_results()
+        results_df = pd.concat(results_list, ignore_index=True)
+        return results_df
+
     def load_leaderboards(self) -> List[pd.DataFrame]:
         if self.num_contexts == 0:
             raise AssertionError('Empty output_contexts!')
@@ -78,6 +94,7 @@ class OutputSuiteContext:
             with_infer_speed=self.include_infer_speed,
         )
 
+        # TODO: Migrate to `self._loop_func`
         if self.mode == 'seq':
             result = self._aggregate_leaderboards_seq(**kwargs)
         elif self.mode == 'ray':
@@ -89,19 +106,15 @@ class OutputSuiteContext:
         return result
 
     def aggregate_leaderboards(self) -> pd.DataFrame:
-        df_full = self.load_leaderboards()
-        df_full = pd.concat(df_full, ignore_index=True)
-        df_full['framework'] = df_full['model']
-        # df_full['result'] = df_full['score_test']
-        df_full['duration'] = df_full['fit_time']
-        # df_full['predict_duration'] = df_full['pred_time_test']
-        return df_full
+        leaderboards_list = self.load_leaderboards()
+        leaderboards_df = pd.concat(leaderboards_list, ignore_index=True)
+        return leaderboards_df
 
     def get_benchmark_failures(self):
         amlb_info_dict = dict()
 
         process_func = _with_ray if self.mode == 'ray' else _with_seq
-        amlb_info_list = process_func(func=_get_amlb_info, input_list=self.output_contexts)
+        amlb_info_list = process_func(func=OutputContext.get_amlb_info, input_list=self.output_contexts)
 
         for output_context, amlb_info in zip(self.output_contexts, amlb_info_list):
             path_relative = remove_prefix(output_context.path, prefix=self.path)
@@ -154,11 +167,10 @@ class OutputSuiteContext:
         return result
 
 
-def _get_amlb_info(output_context: OutputContext):
-    return output_context.get_amlb_info()
-
-
-def _with_seq(func, input_list: list, kwargs=None):
+def _with_seq(func, input_list: list, kwargs=None) -> list:
+    """
+    For-loop through a function call sequentially
+    """
     if kwargs is None:
         kwargs = dict()
     out_list = []
@@ -167,7 +179,10 @@ def _with_seq(func, input_list: list, kwargs=None):
     return out_list
 
 
-def _with_ray(func, input_list: list, kwargs=None):
+def _with_ray(func, input_list: list, kwargs=None) -> list:
+    """
+    For-loop through a function call with ray
+    """
     if kwargs is None:
         kwargs = dict()
 

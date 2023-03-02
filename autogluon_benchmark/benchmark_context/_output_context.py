@@ -53,8 +53,14 @@ class OutputContext:
     def path_zeroshot_metadata(self):
         return self.path + 'zeroshot/zeroshot_metadata.pkl'
 
-    def load_results(self) -> pd.DataFrame:
-        return load_pd.load(self.path_results)
+    def load_results(self, include_infer_speed=False) -> pd.DataFrame:
+        results = load_pd.load(self.path_results)
+        if include_infer_speed:
+            try:
+                results = self._merge_results_with_infer_speed(results=results, infer_speed=None)
+            except FileNotFoundError:
+                return None
+        return results
 
     def load_leaderboard(self) -> pd.DataFrame:
         return load_pd.load(self.path_leaderboard)
@@ -132,12 +138,18 @@ class OutputContext:
             # print(combined)
 
             combined_full = pd.merge(combined, scores, on='id', how='left')
+
+            combined_full['framework'] = combined_full['model']
+            # combined_full['result'] = combined_full['score_test']
+            combined_full['duration'] = combined_full['fit_time']
+            # combined_full['predict_duration'] = combined_full['pred_time_test']
+
             # print(combined_full)
             print(f'SUCCESS: {print_msg}')
             return combined_full
 
     def _merge_leaderboard_with_infer_speed(self, leaderboard: pd.DataFrame) -> pd.DataFrame:
-        infer_speed_df = load_pd.load(self.path_infer_speed)
+        infer_speed_df = self.load_infer_speed()
         infer_speed_df = infer_speed_df[['model', 'batch_size', 'pred_time_test_with_transform']]
         infer_speed_m_df = infer_speed_df.set_index(['model', 'batch_size'], drop=True)
         a = infer_speed_m_df.to_dict()
@@ -153,3 +165,13 @@ class OutputContext:
         c_df = pd.DataFrame(c).rename_axis('model').reset_index(drop=False)
         leaderboard = pd.merge(leaderboard, c_df, on='model')
         return leaderboard
+
+    def _merge_results_with_infer_speed(self, results: pd.DataFrame, infer_speed: pd.DataFrame = None) -> pd.DataFrame:
+        if infer_speed is None:
+            infer_speed = self.load_infer_speed()
+        infer_speed_best = infer_speed[infer_speed['model'] == 'best']
+        batch_sizes = list(infer_speed_best['batch_size'].unique())
+        for batch_size in batch_sizes:
+            results[f'pred_time_test_with_transform_{batch_size}'] = \
+                infer_speed_best[infer_speed_best['batch_size'] == batch_size].iloc[0]['pred_time_test_with_transform']
+        return results
