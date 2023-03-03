@@ -5,7 +5,7 @@ from autogluon.common.savers import save_pkl
 from autogluon_benchmark import OutputSuiteContext
 
 
-def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_datasets=None, folds=None):
+def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_datasets=None, folds=None, max_size_mb=10):
     output_suite_context = OutputSuiteContext(
         path=path_prefix,
         contains=contains,
@@ -33,9 +33,7 @@ def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_dataset
     is_valid_lst = output_suite_context._loop_func(func=_validate, input_list=output_suite_context.output_contexts)
     output_suite_context.filter(is_valid_lst)
 
-    # output_suite_context.output_contexts = output_suite_context.output_contexts[:20]
-
-    zeroshot_metadata_list = output_suite_context.load_zeroshot_metadata(allow_exception=True)
+    zeroshot_metadata_list = output_suite_context.load_zeroshot_metadata(max_size_mb=max_size_mb, allow_exception=True)
 
     output_suite_context.filter(filter_lst=[zsm is not None for zsm in zeroshot_metadata_list])
 
@@ -51,20 +49,9 @@ def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_dataset
         print(f'TOT Size: {round(size_bytes_total / 1e6, 3)} MB | CUR Size: {round(size_bytes / 1e6, 3)} MB')
     print(f'{len_valid}/{len_total} Valid Results!')
 
-    output_contexts = output_suite_context.output_contexts
-
-    num_paths = len(output_contexts)
-    aggregated_pred_proba = {}
-    aggregated_ground_truth = {}
     results_lst = output_suite_context.load_results()
-    for i, (output_context, zeroshot_metadata, scores) in enumerate(zip(output_contexts, zeroshot_metadata_list, results_lst)):
-        id = scores['id'][0]
-        fold_in_scores = scores['fold'][0]
-        fold = scores.iloc[0]['fold']
-        task_name = scores.iloc[0]['task']
-        fold = int(fold)
-        assert fold == fold_in_scores
-        print(f'{i + 1}/{num_paths} | {task_name} | {fold} | {output_context.path}')
+
+    aggregated_pred_proba, aggregated_ground_truth = output_suite_context.construct_zs_dict(results_lst=results_lst, zeroshot_metadata_list=zeroshot_metadata_list)
 
         if task_name not in aggregated_ground_truth:
             aggregated_ground_truth[task_name] = {}
@@ -97,7 +84,13 @@ def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_dataset
     return aggregated_pred_proba, aggregated_ground_truth
 
 
-def aggregate_zeroshot_from_params(s3_bucket, s3_prefix, version_name, constraint, invalid_datasets=None, folds=None):
+def aggregate_zeroshot_from_params(s3_bucket,
+                                   s3_prefix,
+                                   version_name,
+                                   constraint,
+                                   invalid_datasets=None,
+                                   folds=None,
+                                   max_size_mb=10):
     assert version_name is not None
     assert s3_bucket is not None
     assert s3_prefix is not None
@@ -110,6 +103,7 @@ def aggregate_zeroshot_from_params(s3_bucket, s3_prefix, version_name, constrain
         contains=contains,
         invalid_datasets=invalid_datasets,
         folds=folds,
+        max_size_mb=max_size_mb,
     )
 
     if len(aggregated_pred_proba) == 0:
@@ -137,20 +131,22 @@ if __name__ == '__main__':
     version_name = '2023_02_27_zs'
     s3_bucket = 'automl-benchmark-ag'
     s3_prefix = 'ec2/'
+    max_size_mb = 100
 
-    invalid_datasets = [
-        'dionis',
-        'Airlines_DepDelay_10M',
-        'covertype',
-        'helena',
-        'KDDCup99',
-        'sf-police-incidents',
-        'Buzzinsocialmedia_Twitter',
-        'Higgs',
-        'nyc-taxi-green-dec-2016',
-        'porto-seguro',
-        'volkert',
-    ]
+    # invalid_datasets = [
+    #     'dionis',
+    #     'Airlines_DepDelay_10M',
+    #     'covertype',
+    #     'helena',
+    #     'KDDCup99',
+    #     'sf-police-incidents',
+    #     'Buzzinsocialmedia_Twitter',
+    #     'Higgs',
+    #     'nyc-taxi-green-dec-2016',
+    #     'porto-seguro',
+    #     'volkert',
+    # ]
+    invalid_datasets = []
     # folds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     folds = [0]
 
@@ -164,5 +160,6 @@ if __name__ == '__main__':
         version_name=version_name,
         constraint=constraint,
         invalid_datasets=invalid_datasets,
+        max_size_mb=max_size_mb,
         folds=folds,
     )

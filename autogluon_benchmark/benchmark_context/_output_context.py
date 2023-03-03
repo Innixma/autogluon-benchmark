@@ -80,7 +80,7 @@ class OutputContext:
     def load_infer_speed(self) -> pd.DataFrame:
         return load_pd.load(self.path_infer_speed)
 
-    def load_zeroshot_metadata(self) -> dict:
+    def load_zeroshot_metadata(self, max_size_mb: float = None) -> dict:
         s3_bucket = self.get_s3_bucket()
         s3_prefix = self.get_s3_prefix(path=self.path_zeroshot_metadata)
         s3 = boto3.client('s3')
@@ -89,7 +89,7 @@ class OutputContext:
 
         size_og_mb = round(size / 1e6, 3)
 
-        if size_og_mb > 10:
+        if max_size_mb is not None and size_og_mb > max_size_mb:
             print(f'exit: {size_og_mb} | {self.path}')
             return None
 

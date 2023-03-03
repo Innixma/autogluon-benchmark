@@ -83,9 +83,10 @@ class OutputSuiteContext:
                                input_list=self.output_contexts,
                                kwargs=dict(include_infer_speed=self.include_infer_speed))
 
-    def load_zeroshot_metadata(self, allow_exception=False) -> List[dict]:
+    def load_zeroshot_metadata(self, max_size_mb: float = None, allow_exception=False) -> List[dict]:
         return self._loop_func(func=OutputContext.load_zeroshot_metadata,
                                input_list=self.output_contexts,
+                               kwargs=dict(max_size_mb=max_size_mb),
                                allow_exception=allow_exception)
 
     def filter_failures(self):
@@ -194,6 +195,52 @@ class OutputSuiteContext:
         print('finished sequential...')
         result = [r for r in result if r is not None]
         return result
+
+    def construct_zs_dict(self, results_lst=None, zeroshot_metadata_list=None):
+        if results_lst is None:
+            results_lst = self.load_results()
+        if zeroshot_metadata_list is None:
+            zeroshot_metadata_list = self.load_zeroshot_metadata()
+        output_contexts = self.output_contexts
+        num_paths = len(output_contexts)
+        aggregated_pred_proba = {}
+        aggregated_ground_truth = {}
+        for i, (output_context, zeroshot_metadata, scores) in enumerate(
+                zip(output_contexts, zeroshot_metadata_list, results_lst)):
+            id = scores['id'][0]
+            fold = scores.iloc[0]['fold']
+            task_name = scores.iloc[0]['task']
+            fold = int(fold)
+            print(f'{i + 1}/{num_paths} | {task_name} | {fold} | {output_context.path}')
+
+            if task_name not in aggregated_ground_truth:
+                aggregated_ground_truth[task_name] = {}
+            if fold not in aggregated_ground_truth[task_name]:
+                aggregated_ground_truth[task_name][fold] = {}
+                for k in [
+                    'y_val',
+                    'y_test',
+                    'eval_metric',
+                    'problem_type',
+                    'ordered_class_labels',
+                    'ordered_class_labels_transformed',
+                    'problem_type_transform',
+                    'num_classes',
+                    'label',
+                ]:
+                    aggregated_ground_truth[task_name][fold][k] = zeroshot_metadata[k]
+                aggregated_ground_truth[task_name][fold]['task'] = task_name
+                aggregated_ground_truth[task_name][fold]['id'] = id
+            if task_name not in aggregated_pred_proba:
+                aggregated_pred_proba[task_name] = {}
+            if fold not in aggregated_pred_proba[task_name]:
+                aggregated_pred_proba[task_name][fold] = {}
+            for k in ['pred_proba_dict_val', 'pred_proba_dict_test']:
+                if k not in aggregated_pred_proba[task_name][fold]:
+                    aggregated_pred_proba[task_name][fold][k] = {}
+                for m, pred_proba in zeroshot_metadata[k].items():
+                    aggregated_pred_proba[task_name][fold][k][m] = pred_proba
+        return aggregated_pred_proba, aggregated_ground_truth
 
 
 def _with_seq(func, input_list: list, kwargs=None, allow_exception=False, exception_default=None) -> list:
