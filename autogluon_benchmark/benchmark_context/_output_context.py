@@ -1,7 +1,9 @@
+import boto3
 import numpy as np
 import pandas as pd
 
-from autogluon.common.loaders import load_pd
+from autogluon.common.loaders import load_pd, load_pkl
+from autogluon.common.utils.s3_utils import s3_path_to_bucket_prefix
 
 
 class OutputContext:
@@ -24,6 +26,16 @@ class OutputContext:
     @property
     def path(self):
         return self._path
+
+    def get_s3_bucket(self, path=None):
+        if path is None:
+            path = self.path
+        return s3_path_to_bucket_prefix(path)[0]
+
+    def get_s3_prefix(self, path=None):
+        if path is None:
+            path = self.path
+        return s3_path_to_bucket_prefix(path)[1]
 
     @property
     def path_results(self):
@@ -67,6 +79,23 @@ class OutputContext:
 
     def load_infer_speed(self) -> pd.DataFrame:
         return load_pd.load(self.path_infer_speed)
+
+    def load_zeroshot_metadata(self) -> dict:
+        s3_bucket = self.get_s3_bucket()
+        s3_prefix = self.get_s3_prefix(path=self.path_zeroshot_metadata)
+        s3 = boto3.client('s3')
+        response = s3.head_object(Bucket=s3_bucket, Key=s3_prefix)
+        size = response['ContentLength']
+
+        size_og_mb = round(size / 1e6, 3)
+
+        if size_og_mb > 10:
+            print(f'exit: {size_og_mb} | {self.path}')
+            return None
+
+        a = load_pkl.load(self.path_zeroshot_metadata)
+        print(f'CUR Size: {size_og_mb} MB | {self.path}')
+        return a
 
     def get_amlb_info(self, results_df: pd.DataFrame = None) -> str:
         if results_df is None:

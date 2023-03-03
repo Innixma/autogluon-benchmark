@@ -1,96 +1,98 @@
 import argparse
 
-import pandas as pd
-
-from autogluon.common.loaders import load_pd, load_pkl
-from autogluon.common.loaders.load_s3 import list_bucket_prefix_suffix_contains_s3
-from autogluon.common.utils import s3_utils
 from autogluon.common.savers import save_pkl
 
-
-def get_s3_paths(path_prefix: str, contains=None, suffix=None):
-    bucket, prefix = s3_utils.s3_path_to_bucket_prefix(path_prefix)
-    objects = list_bucket_prefix_suffix_contains_s3(bucket=bucket, prefix=prefix, suffix=suffix, contains=contains)
-    paths_full = [s3_utils.s3_bucket_prefix_to_path(bucket=bucket, prefix=file, version='s3') for file in objects]
-    return paths_full
+from autogluon_benchmark import OutputSuiteContext
 
 
 def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_datasets=None, folds=None):
-    zeroshot_suffix = '/zeroshot_metadata.pkl'
-    results_suffix = 'scores/results.csv'
-    paths_full = get_s3_paths(path_prefix, contains=contains, suffix=zeroshot_suffix)
-
+    output_suite_context = OutputSuiteContext(
+        path=path_prefix,
+        contains=contains,
+        mode='ray',
+    )
     if invalid_datasets is None:
         invalid_datasets = set()
     else:
         invalid_datasets = set(invalid_datasets)
 
-    paths_valid = []
-    for i, path in enumerate(paths_full):
-        dataset_name, fold = path.split('zeroshot/')[1].split('/zeroshot_metadata.pkl')[0].rsplit('/', 1)
+    output_suite_context.filter_failures()
+    def _validate(output_context):
+        is_valid = True
+        result_df = output_context.load_results()
+        fold = result_df.iloc[0]['fold']
+        task_name = result_df.iloc[0]['task']
         fold = int(fold)
         if folds is not None and fold not in folds:
-            continue
-        if dataset_name in invalid_datasets:
-            continue
-        paths_valid.append(path)
-    num_paths = len(paths_valid)
+            is_valid = False
+        if task_name in invalid_datasets:
+            print(f'INVALID TASK: {task_name}')
+            is_valid = False
+        return is_valid
+
+    is_valid_lst = output_suite_context._loop_func(func=_validate, input_list=output_suite_context.output_contexts)
+    output_suite_context.filter(is_valid_lst)
+
+    # output_suite_context.output_contexts = output_suite_context.output_contexts[:20]
+
+    zeroshot_metadata_list = output_suite_context.load_zeroshot_metadata(allow_exception=True)
+
+    output_suite_context.filter(filter_lst=[zsm is not None for zsm in zeroshot_metadata_list])
+
+    import sys
+    import pickle
+    size_bytes_total = 0
+    len_total = len(zeroshot_metadata_list)
+    zeroshot_metadata_list = [z for z in zeroshot_metadata_list if z is not None]
+    len_valid = len(zeroshot_metadata_list)
+    for i, zsm in enumerate(zeroshot_metadata_list):
+        size_bytes = sys.getsizeof(pickle.dumps(zsm, protocol=4))
+        size_bytes_total += size_bytes
+        print(f'TOT Size: {round(size_bytes_total / 1e6, 3)} MB | CUR Size: {round(size_bytes / 1e6, 3)} MB')
+    print(f'{len_valid}/{len_total} Valid Results!')
+
+    output_contexts = output_suite_context.output_contexts
+
+    num_paths = len(output_contexts)
     aggregated_pred_proba = {}
     aggregated_ground_truth = {}
-    size_bytes_total = 0
-    for i, path in enumerate(paths_valid):
-        path_to_scores = path.split('/output/', 1)[0] + '/output/' + results_suffix
-        scores = load_pd.load(path_to_scores)
-        task_name = scores['task'][0]
+    results_lst = output_suite_context.load_results()
+    for i, (output_context, zeroshot_metadata, scores) in enumerate(zip(output_contexts, zeroshot_metadata_list, results_lst)):
         id = scores['id'][0]
         fold_in_scores = scores['fold'][0]
-
-        dataset_name, fold = path.split('zeroshot/')[1].split('/zeroshot_metadata.pkl')[0].rsplit('/', 1)
-        if task_name != dataset_name:
-            print(f'INFO: task name and AWS task name are not the same: {task_name}, {dataset_name}')
+        fold = scores.iloc[0]['fold']
+        task_name = scores.iloc[0]['task']
         fold = int(fold)
         assert fold == fold_in_scores
-        print(f'{i + 1}/{num_paths} | {task_name} | {fold} | {path}')
-        try:
-            zeroshot_metadata = load_pkl.load(path)
-        except Exception:
-            continue
-        else:
-            pass
-            import sys
-            import pickle
-            size_bytes = sys.getsizeof(pickle.dumps(zeroshot_metadata, protocol=4))
-            print(f'CUR Size: {round(size_bytes/1e6, 3)} MB')
-            size_bytes_total += size_bytes
-            print(f'TOT Size: {round(size_bytes_total / 1e6, 3)} MB')
+        print(f'{i + 1}/{num_paths} | {task_name} | {fold} | {output_context.path}')
 
-            if task_name not in aggregated_ground_truth:
-                aggregated_ground_truth[task_name] = {}
-            if fold not in aggregated_ground_truth[task_name]:
-                aggregated_ground_truth[task_name][fold] = {}
-                for k in [
-                    'y_val',
-                    'y_test',
-                    'eval_metric',
-                    'problem_type',
-                    'ordered_class_labels',
-                    'ordered_class_labels_transformed',
-                    'problem_type_transform',
-                    'num_classes',
-                    'label',
-                ]:
-                    aggregated_ground_truth[task_name][fold][k] = zeroshot_metadata[k]
-                aggregated_ground_truth[task_name][fold]['task'] = task_name
-                aggregated_ground_truth[task_name][fold]['id'] = id
-            if task_name not in aggregated_pred_proba:
-                aggregated_pred_proba[task_name] = {}
-            if fold not in aggregated_pred_proba[task_name]:
-                aggregated_pred_proba[task_name][fold] = {}
-            for k in ['pred_proba_dict_val', 'pred_proba_dict_test']:
-                if k not in aggregated_pred_proba[task_name][fold]:
-                    aggregated_pred_proba[task_name][fold][k] = {}
-                for m, pred_proba in zeroshot_metadata[k].items():
-                    aggregated_pred_proba[task_name][fold][k][m] = pred_proba
+        if task_name not in aggregated_ground_truth:
+            aggregated_ground_truth[task_name] = {}
+        if fold not in aggregated_ground_truth[task_name]:
+            aggregated_ground_truth[task_name][fold] = {}
+            for k in [
+                'y_val',
+                'y_test',
+                'eval_metric',
+                'problem_type',
+                'ordered_class_labels',
+                'ordered_class_labels_transformed',
+                'problem_type_transform',
+                'num_classes',
+                'label',
+            ]:
+                aggregated_ground_truth[task_name][fold][k] = zeroshot_metadata[k]
+            aggregated_ground_truth[task_name][fold]['task'] = task_name
+            aggregated_ground_truth[task_name][fold]['id'] = id
+        if task_name not in aggregated_pred_proba:
+            aggregated_pred_proba[task_name] = {}
+        if fold not in aggregated_pred_proba[task_name]:
+            aggregated_pred_proba[task_name][fold] = {}
+        for k in ['pred_proba_dict_val', 'pred_proba_dict_test']:
+            if k not in aggregated_pred_proba[task_name][fold]:
+                aggregated_pred_proba[task_name][fold][k] = {}
+            for m, pred_proba in zeroshot_metadata[k].items():
+                aggregated_pred_proba[task_name][fold][k][m] = pred_proba
 
     return aggregated_pred_proba, aggregated_ground_truth
 
@@ -113,8 +115,8 @@ def aggregate_zeroshot_from_params(s3_bucket, s3_prefix, version_name, constrain
     if len(aggregated_pred_proba) == 0:
         raise AssertionError('Empty Result!')
 
-    aggregated_pred_proba_path = f's3://{s3_bucket}/aggregated/{result_path}zeroshot_pred_proba_{version_name}.pkl'
-    aggregated_ground_truth_path = f's3://{s3_bucket}/aggregated/{result_path}zeroshot_gt_{version_name}.pkl'
+    aggregated_pred_proba_path = f's3://{s3_bucket}/aggregated/{result_path}zeroshot_pred_proba_{version_name}_mini.pkl'
+    aggregated_ground_truth_path = f's3://{s3_bucket}/aggregated/{result_path}zeroshot_gt_{version_name}_mini.pkl'
     print(f'Saving pred_proba output to {aggregated_pred_proba_path}')
     print(f'Saving ground_truth output to {aggregated_ground_truth_path}')
 
@@ -123,18 +125,18 @@ def aggregate_zeroshot_from_params(s3_bucket, s3_prefix, version_name, constrain
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--s3_bucket', type=str, help="Name of S3 bucket that results to aggregate get outputted to",
-                        default='automl-benchmark-ag', nargs='?')
-    parser.add_argument('--s3_prefix', type=str, help='Prefix for path to results needing aggregation', default='ec2/', nargs='?')
-    parser.add_argument('--version_name', type=str, help='Root folder name in EC2 of results', nargs='?')
-    parser.add_argument('--constraint', type=str, help='Name of constraint used in benchmark', default='1h8c', nargs='?')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    # parser.add_argument('--s3_bucket', type=str, help="Name of S3 bucket that results to aggregate get outputted to",
+    #                     default='automl-benchmark-ag', nargs='?')
+    # parser.add_argument('--s3_prefix', type=str, help='Prefix for path to results needing aggregation', default='ec2/', nargs='?')
+    # parser.add_argument('--version_name', type=str, help='Root folder name in EC2 of results', nargs='?')
+    # parser.add_argument('--constraint', type=str, help='Name of constraint used in benchmark', default='1h8c', nargs='?')
+    # args = parser.parse_args()
 
-    # constraint = '16h8c'
-    # version_name = '2022_10_13_zs'
-    # s3_bucket = 'automl-benchmark-ag'
-    # s3_prefix = 'ec2/'
+    constraint = '24h64c'
+    version_name = '2023_02_27_zs'
+    s3_bucket = 'automl-benchmark-ag'
+    s3_prefix = 'ec2/'
 
     invalid_datasets = [
         'dionis',
@@ -149,17 +151,18 @@ if __name__ == '__main__':
         'porto-seguro',
         'volkert',
     ]
+    # folds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     folds = [0]
 
     aggregate_zeroshot_from_params(
-        s3_bucket=args.s3_bucket,
-        s3_prefix=args.s3_prefix,
-        version_name=args.version_name,
-        constraint=args.constraint,
-        # s3_bucket=s3_bucket,
-        # s3_prefix=s3_prefix,
-        # version_name=version_name,
-        # constraint=constraint,
+        # s3_bucket=args.s3_bucket,
+        # s3_prefix=args.s3_prefix,
+        # version_name=args.version_name,
+        # constraint=args.constraint,
+        s3_bucket=s3_bucket,
+        s3_prefix=s3_prefix,
+        version_name=version_name,
+        constraint=constraint,
         invalid_datasets=invalid_datasets,
         folds=folds,
     )

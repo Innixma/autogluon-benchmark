@@ -68,16 +68,43 @@ class OutputSuiteContext:
     def num_contexts(self):
         return len(self.output_contexts)
 
-    def _loop_func(self, func, input_list: list, kwargs=None) -> list:
+    def _loop_func(self, func, input_list: list, kwargs=None, allow_exception=False, exception_default=None) -> list:
         if len(input_list) == 0:
             return []
         process_func = _with_ray if self.mode == 'ray' else _with_seq
-        return process_func(func=func, input_list=input_list, kwargs=kwargs)
+        return process_func(func=func,
+                            input_list=input_list,
+                            kwargs=kwargs,
+                            allow_exception=allow_exception,
+                            exception_default=exception_default)
 
     def load_results(self) -> List[pd.DataFrame]:
         return self._loop_func(func=OutputContext.load_results,
                                input_list=self.output_contexts,
                                kwargs=dict(include_infer_speed=self.include_infer_speed))
+
+    def load_zeroshot_metadata(self, allow_exception=False) -> List[dict]:
+        return self._loop_func(func=OutputContext.load_zeroshot_metadata,
+                               input_list=self.output_contexts,
+                               allow_exception=allow_exception)
+
+    def filter_failures(self):
+        amlb_info_list = self.get_amlb_info()
+        output_contexts_valid = []
+        for info, output_context in zip(amlb_info_list, self.output_contexts):
+            if info is None:
+                output_contexts_valid.append(output_context)
+        print(f'Filtered Failures: {len(output_contexts_valid)}/{len(self.output_contexts)} valid')
+        self.output_contexts = output_contexts_valid
+
+    def filter(self, filter_lst: List[bool]):
+        """
+        Filter self.output_contexts by a boolean list. Only keep contexts where the boolean is True.
+        """
+        assert len(filter_lst) == len(self.output_contexts)
+        self.output_contexts = [
+            output_context for output_context, is_valid in zip(self.output_contexts, filter_lst) if is_valid is True
+        ]
 
     def aggregate_results(self) -> pd.DataFrame:
         results_list = self.load_results()
@@ -110,11 +137,13 @@ class OutputSuiteContext:
         leaderboards_df = pd.concat(leaderboards_list, ignore_index=True)
         return leaderboards_df
 
+    def get_amlb_info(self) -> List[str]:
+        return self._loop_func(func=OutputContext.get_amlb_info, input_list=self.output_contexts)
+
     def get_benchmark_failures(self):
         amlb_info_dict = dict()
 
-        process_func = _with_ray if self.mode == 'ray' else _with_seq
-        amlb_info_list = process_func(func=OutputContext.get_amlb_info, input_list=self.output_contexts)
+        amlb_info_list = self.get_amlb_info()
 
         for output_context, amlb_info in zip(self.output_contexts, amlb_info_list):
             path_relative = remove_prefix(output_context.path, prefix=self.path)
@@ -167,28 +196,46 @@ class OutputSuiteContext:
         return result
 
 
-def _with_seq(func, input_list: list, kwargs=None) -> list:
+def _with_seq(func, input_list: list, kwargs=None, allow_exception=False, exception_default=None) -> list:
     """
     For-loop through a function call sequentially
     """
     if kwargs is None:
         kwargs = dict()
+    if allow_exception:
+        def _func(*args, **kw):
+            try:
+                return func(*args, **kw)
+            except:
+                print('yo')
+                return exception_default
+    else:
+        _func = func
     out_list = []
     for input_val in input_list:
-        out_list.append(func(input_val, **kwargs))
+        out_list.append(_func(input_val, **kwargs))
     return out_list
 
 
-def _with_ray(func, input_list: list, kwargs=None) -> list:
+def _with_ray(func, input_list: list, kwargs=None, allow_exception=False, exception_default=None) -> list:
     """
     For-loop through a function call with ray
     """
     if kwargs is None:
         kwargs = dict()
+    if allow_exception:
+        def _func(*args, **kw):
+            try:
+                return func(*args, **kw)
+            except:
+                print('yo')
+                return exception_default
+    else:
+        _func = func
 
     if not ray.is_initialized():
         ray.init()
-    remote_func = ray.remote(func)
+    remote_func = ray.remote(_func)
     results = []
     for i in input_list:
         results.append(remote_func.remote(i, **kwargs))
