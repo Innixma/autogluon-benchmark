@@ -42,6 +42,8 @@ class OutputSuiteContext:
         self._path = path
         self.contains = contains
         self.output_contexts = self.get_output_contexts(contains=self.contains)
+        if len(self.output_contexts) == 0:
+            print(f'WARNING: No output contexts found via path={self._path}, contains={self.contains}')
         self.include_infer_speed = include_infer_speed
         self.mode = mode
         if columns_to_keep is None:

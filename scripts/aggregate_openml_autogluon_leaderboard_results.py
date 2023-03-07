@@ -20,6 +20,7 @@ def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True, in
                                               columns_to_keep=columns_to_keep,
                                               include_infer_speed=include_infer_speed,
                                               mode=mode)
+    output_suite_context.filter_failures()
 
     # output_suite_context.get_benchmark_failures()
 

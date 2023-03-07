@@ -12,7 +12,7 @@ def terminate_stopped_ec2_amlb(region='us-east-1', dry_run=True):
     Only run this if you know what you are doing. Set `dry_run=False` to actually terminate the instances.
     """
     ec2 = boto3.resource('ec2', region)
-    name_prefix = 'benchmark_aws.'
+    name_prefix = 'amlb_aws.'
 
     total_instance_count = 0
     stopped_instance_count = 0
@@ -21,13 +21,16 @@ def terminate_stopped_ec2_amlb(region='us-east-1', dry_run=True):
         total_instance_count += 1
         if instance.state['Name'] == 'stopped':
             stopped_instance_count += 1
-            for tag in instance.tags:
-                if tag['Key'] == 'Name':
-                    name = tag['Value']
-                    if name.startswith(name_prefix):
-                        print(f'Planning to terminate: {name}')
-                        instances_to_terminate.append(instance)
-                        break
+            if instance.tags is None:
+                print(f'No tags: {instance.state["Name"]}')  # FIXME
+            else:
+                for tag in instance.tags:
+                    if tag['Key'] == 'Name':
+                        name = tag['Value']
+                        if name.startswith(name_prefix):
+                            print(f'Planning to terminate: {name}')
+                            instances_to_terminate.append(instance)
+                            break
 
     terminating_instance_count = len(instances_to_terminate)
     print(f'Total Instances        : {total_instance_count}')

@@ -53,33 +53,12 @@ def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_dataset
 
     aggregated_pred_proba, aggregated_ground_truth = output_suite_context.construct_zs_dict(results_lst=results_lst, zeroshot_metadata_list=zeroshot_metadata_list)
 
-        if task_name not in aggregated_ground_truth:
-            aggregated_ground_truth[task_name] = {}
-        if fold not in aggregated_ground_truth[task_name]:
-            aggregated_ground_truth[task_name][fold] = {}
-            for k in [
-                'y_val',
-                'y_test',
-                'eval_metric',
-                'problem_type',
-                'ordered_class_labels',
-                'ordered_class_labels_transformed',
-                'problem_type_transform',
-                'num_classes',
-                'label',
-            ]:
-                aggregated_ground_truth[task_name][fold][k] = zeroshot_metadata[k]
-            aggregated_ground_truth[task_name][fold]['task'] = task_name
-            aggregated_ground_truth[task_name][fold]['id'] = id
-        if task_name not in aggregated_pred_proba:
-            aggregated_pred_proba[task_name] = {}
-        if fold not in aggregated_pred_proba[task_name]:
-            aggregated_pred_proba[task_name][fold] = {}
-        for k in ['pred_proba_dict_val', 'pred_proba_dict_test']:
-            if k not in aggregated_pred_proba[task_name][fold]:
-                aggregated_pred_proba[task_name][fold][k] = {}
-            for m, pred_proba in zeroshot_metadata[k].items():
-                aggregated_pred_proba[task_name][fold][k][m] = pred_proba
+    # output_suite_context._filter_zs(aggregated_pred_proba=aggregated_pred_proba,
+    #                                 aggregated_ground_truth=aggregated_ground_truth,
+    #                                 require_all_models=True)
+
+    # from autogluon_zeroshot.simulation.tabular_predictions import TabularPicklePredictions
+    # tpp = TabularPicklePredictions(pred_dict=aggregated_pred_proba)
 
     return aggregated_pred_proba, aggregated_ground_truth
 
