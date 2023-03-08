@@ -63,7 +63,7 @@ class BenchmarkEvaluator:
         if banned_datasets is not None:
             results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
         if self._use_tid_as_dataset_name:
-            results_raw['dataset'] = results_raw['tid'].astype(str)
+            results_raw['dataset'] = results_raw['tid'].astype(int).astype(str)
             if banned_datasets is not None:
                 results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
         if infer_batch_size is not None:
