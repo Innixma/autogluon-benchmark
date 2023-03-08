@@ -2,9 +2,9 @@ import warnings
 
 import pandas as pd
 
-from autogluon_utils.benchmarking.evaluation.constants import TIME_INFER_S, METRIC_ERROR
-from autogluon_utils.benchmarking.loaders.metadata_loader import load_task_metadata
-from autogluon_utils.benchmarking.evaluation.preprocess.preprocess_utils import fill_missing_results_with_default, convert_folds_into_separate_datasets
+from ..constants import TIME_INFER_S, METRIC_ERROR
+from ..preprocess.preprocess_utils import fill_missing_results_with_default, convert_folds_into_separate_datasets
+from ...metadata.metadata_loader import load_task_metadata
 
 
 class BenchmarkEvaluator:
