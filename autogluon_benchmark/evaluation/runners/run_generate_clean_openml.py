@@ -14,24 +14,26 @@ def clean_and_save_results(
         results_dir_input=None,
         results_dir_output=None,
         file_prefix='results_automlbenchmark',
+        run_name_in_input_path=True,
         constraints=None,
         out_path_prefix='openml_ag_',
         out_path_suffix='',
-        framework_suffix_column=None,
+        framework_suffix_column='constraint',
 ):
-    if constraints is None:
-        constraints = ['1h8c', '4h8c']
-
     if results_dir_input is None:
         results_dir_input = results_dir + 'input/raw/'
     if results_dir_output is None:
         results_dir_output = results_dir + 'input/prepared/openml/'
+    run_name_str = f'_{run_name}' if run_name_in_input_path else ''
 
     results_list = []
+    if constraints is None:
+        constraints = [None]
     for constraint in constraints:
+        constraint_str = f'_{constraint}' if constraint is not None else ''
         results = preprocess_openml.preprocess_openml_input(
-            path=results_dir_input + f'{file_prefix}_{constraint}_{run_name}.csv',
-            framework_suffix=f'_{constraint}',
+            path=results_dir_input + f'{file_prefix}{constraint_str}{run_name_str}.csv',
+            framework_suffix=constraint_str,
             framework_suffix_column=framework_suffix_column,
         )
         results_list.append(results)
@@ -125,8 +127,36 @@ if __name__ == '__main__':
     # clean_and_save_results(run_name_arg, constraints=['1h8c'])
     # run_name_arg = '2023_02_14_v07_infer_speed'
     # clean_and_save_results(run_name_arg, constraints=['1h8c'])
-    run_name_arg = '2023_02_20_bool'
-    clean_and_save_results(run_name_arg, constraints=['1h8c'])
+
+    run_name_arg = '2023_02_27_zs'
+    path_prefix = f's3://automl-benchmark-ag/aggregated/ec2/2023_02_27_zs/'
+    clean_and_save_results(run_name_arg,
+                           file_prefix='results',
+                           results_dir_input=path_prefix,
+                           run_name_in_input_path=False,
+                           )
+    clean_and_save_results(
+        run_name_arg,
+        results_dir_input=path_prefix,
+        file_prefix='leaderboard',
+        out_path_suffix='_models',
+        run_name_in_input_path=False,
+    )
+
+    run_name_arg = '2023_02_27_zs'
+    path_prefix = f's3://automl-benchmark-ag/aggregated/ec2/2023_02_27_zs/'
+    clean_and_save_results(run_name_arg,
+                           file_prefix='results',
+                           results_dir_input=path_prefix,
+                           run_name_in_input_path=False,
+                           )
+    clean_and_save_results(
+        run_name_arg,
+        results_dir_input=path_prefix,
+        file_prefix='leaderboard',
+        out_path_suffix='_models',
+        run_name_in_input_path=False,
+    )
 
     # run_name_arg = '2023_02_14_v07'
     # clean_and_save_results(
