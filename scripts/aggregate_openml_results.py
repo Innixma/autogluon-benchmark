@@ -1,34 +1,6 @@
 import argparse
 
-from autogluon.common.savers import save_pd
-
-from autogluon_benchmark import OutputSuiteContext
-
-
-def aggregate_results(s3_bucket,
-                      s3_prefix,
-                      version_name,
-                      constraint,
-                      include_infer_speed=False,
-                      mode='ray'):
-    contains = f'.{constraint}.'
-    result_path = f'{s3_prefix}{version_name}/'
-    path_prefix = f's3://{s3_bucket}/{result_path}'
-
-    aggregated_results_name = f'results_automlbenchmark_{constraint}_{version_name}.csv'
-
-    output_suite_context = OutputSuiteContext(
-        path=path_prefix,
-        contains=contains,
-        include_infer_speed=include_infer_speed,
-        mode=mode,
-    )
-    results_df = output_suite_context.aggregate_results()
-    print(results_df)
-
-    save_path = f's3://{s3_bucket}/aggregated/{result_path}{aggregated_results_name}'
-    save_pd.save(path=save_path, df=results_df)
-    print(f'Saved to {save_path}!')
+from autogluon_benchmark.aggregate.results import aggregate_results
 
 
 if __name__ == '__main__':
@@ -44,7 +16,8 @@ if __name__ == '__main__':
                         nargs='?')
     parser.set_defaults(keep_params=True)
     parser.set_defaults(include_infer_speed=False)
-    parser.set_defaults(version_name="2023_02_20_bool_test")  # FIXME: Remove
+    parser.set_defaults(version_name="2023_02_27_zs")  # FIXME: Remove
+    parser.set_defaults(constraint="24h64c")  # FIXME: Remove
     args = parser.parse_args()
 
     aggregate_results(

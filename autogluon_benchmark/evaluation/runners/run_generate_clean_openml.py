@@ -10,6 +10,9 @@ from autogluon_benchmark.evaluation.constants import FRAMEWORK
 
 def clean_and_save_results(
         run_name,
+        results_dir='data/results/',
+        results_dir_input=None,
+        results_dir_output=None,
         file_prefix='results_automlbenchmark',
         constraints=None,
         out_path_prefix='openml_ag_',
@@ -19,9 +22,10 @@ def clean_and_save_results(
     if constraints is None:
         constraints = ['1h8c', '4h8c']
 
-    results_dir = 'data/results/'
-    results_dir_input = results_dir + 'input/raw/'
-    results_dir_output = results_dir + 'input/prepared/openml/'
+    if results_dir_input is None:
+        results_dir_input = results_dir + 'input/raw/'
+    if results_dir_output is None:
+        results_dir_output = results_dir + 'input/prepared/openml/'
 
     results_list = []
     for constraint in constraints:
