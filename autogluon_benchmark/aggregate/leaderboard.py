@@ -4,20 +4,13 @@ import time
 from autogluon.common.savers import save_pd
 
 from .. import OutputSuiteContext
-from ..benchmark_context._output_suite_context import DEFAULT_COLUMNS_TO_KEEP
 
 
 def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True, include_infer_speed=False, mode='seq'):
-    columns_to_keep: list = copy.deepcopy(DEFAULT_COLUMNS_TO_KEEP)
-
-    if not keep_params:
-        columns_to_keep.remove('params')
-    print(f'columns_to_keep = {columns_to_keep}')
-
     output_suite_context = OutputSuiteContext(path=path_prefix,
                                               contains=contains,
-                                              columns_to_keep=columns_to_keep,
                                               include_infer_speed=include_infer_speed,
+                                              keep_params=keep_params,
                                               mode=mode)
     output_suite_context.filter_failures()
 

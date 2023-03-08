@@ -22,6 +22,7 @@ def aggregate_results(s3_bucket,
         mode=mode,
     )
     results_df = output_suite_context.aggregate_results()
+
     print(results_df)
 
     save_path = f's3://{s3_bucket}/aggregated/{result_path}{aggregated_results_name}'

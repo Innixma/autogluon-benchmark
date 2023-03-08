@@ -3,12 +3,7 @@ from autogluon.common.savers import save_pkl
 from .. import OutputSuiteContext
 
 
-def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_datasets=None, folds=None, max_size_mb=10):
-    output_suite_context = OutputSuiteContext(
-        path=path_prefix,
-        contains=contains,
-        mode='ray',
-    )
+def load_zeroshot_metadata(output_suite_context, invalid_datasets=None, folds=None, max_size_mb=10):
     if invalid_datasets is None:
         invalid_datasets = set()
     else:
@@ -50,6 +45,22 @@ def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_dataset
     results_lst = output_suite_context.load_results()
 
     aggregated_pred_proba, aggregated_ground_truth = output_suite_context.construct_zs_dict(results_lst=results_lst, zeroshot_metadata_list=zeroshot_metadata_list)
+    return aggregated_pred_proba, aggregated_ground_truth
+
+
+def aggregate_zeroshot_metadata(path_prefix: str, contains=None, invalid_datasets=None, folds=None, max_size_mb=10):
+    output_suite_context = OutputSuiteContext(
+        path=path_prefix,
+        contains=contains,
+        mode='ray',
+    )
+
+    aggregated_pred_proba, aggregated_ground_truth = load_zeroshot_metadata(
+        output_suite_context=output_suite_context,
+        invalid_datasets=invalid_datasets,
+        folds=folds,
+        max_size_mb=max_size_mb,
+    )
 
     # output_suite_context._filter_zs(aggregated_pred_proba=aggregated_pred_proba,
     #                                 aggregated_ground_truth=aggregated_ground_truth,

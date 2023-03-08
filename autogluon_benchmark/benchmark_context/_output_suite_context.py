@@ -1,3 +1,4 @@
+import copy
 from typing import List
 
 import numpy as np
@@ -18,6 +19,7 @@ class OutputSuiteContext:
                  contains: str = None,
                  columns_to_keep: List[str] = None,
                  include_infer_speed: bool = False,
+                 keep_params: bool = True,
                  mode: str = 'seq'):
         """
         Parameters
@@ -33,6 +35,8 @@ class OutputSuiteContext:
             If None, uses DEFAULT_COLUMNS_TO_KEEP
         include_infer_speed : bool, default = False
             Whether to merge infer_speed results when loading results and leaderboard outputs
+        keep_params : bool, default = True
+            If False, drops the "params" column from leaderboard output to reduce size of artifact
         mode : str, default = 'seq'
             One of ['seq', 'ray']
             If 'ray' is installed, this will be much faster as data loading will be parallelized.
@@ -48,6 +52,9 @@ class OutputSuiteContext:
         self.mode = mode
         if columns_to_keep is None:
             columns_to_keep = DEFAULT_COLUMNS_TO_KEEP
+        columns_to_keep = copy.deepcopy(columns_to_keep)
+        if not keep_params:
+            columns_to_keep = [c for c in columns_to_keep if c != 'params']
         self.columns_to_keep = columns_to_keep
 
     def get_output_contexts(self, contains: str = None) -> List[OutputContext]:
