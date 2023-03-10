@@ -2,6 +2,8 @@ import warnings
 
 import pandas as pd
 
+from autogluon.common.utils.s3_utils import is_s3_url
+
 from ..constants import TIME_INFER_S, METRIC_ERROR
 from ..preprocess.preprocess_utils import fill_missing_results_with_default, convert_folds_into_separate_datasets
 from ...metadata.metadata_loader import load_task_metadata
@@ -25,7 +27,7 @@ class BenchmarkEvaluator:
         self._framework_nan_fill = framework_nan_fill
 
     def _load_results(self, paths: list) -> pd.DataFrame:
-        paths = [self.results_dir_input + path for path in paths]
+        paths = [path if is_s3_url(path) else self.results_dir_input + path for path in paths]
         results_raw = pd.concat([pd.read_csv(path) for path in paths], ignore_index=True, sort=True)
         results_raw = results_raw.drop_duplicates(subset=['framework', 'dataset', 'fold'])
         self._check_results_valid(results_raw=results_raw)

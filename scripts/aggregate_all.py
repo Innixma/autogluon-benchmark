@@ -16,7 +16,7 @@ def aggregate_all(path_prefix,
                   keep_params=False,
                   invalid_datasets=None,
                   folds=None,
-                  max_size_mb=10,
+                  max_size_mb=100,
                   mode='ray'):
     s3_bucket, s3_prefix = s3_path_to_bucket_prefix(s3_path=path_prefix)
     output_path = f's3://{s3_bucket}/aggregated/{s3_prefix}'
@@ -53,16 +53,6 @@ def aggregate_all(path_prefix,
         aggregated_pred_proba = None
         aggregated_ground_truth = None
 
-    # TODO: Aggregate openml
-
-    # TODO: Aggregate leaderboard
-
-    # TODO: Aggregate zeroshot
-
-    # TODO: Preprocess openml
-
-    # TODO: Preprocess leaderboard
-
     aggregated_results_name = f'results{constraint_str}{version_name_str}.csv'
     aggregated_results_path = f'{output_path}{aggregated_results_name}'
     save_pd.save(path=aggregated_results_path, df=results_df)
@@ -75,8 +65,10 @@ def aggregate_all(path_prefix,
         print(f'Success! Saved output to "{aggregated_leaderboard_path}"')
 
     if aggregate_zeroshot:
-        aggregated_pred_proba_path = f'{output_path}zeroshot_pred_proba.pkl'
-        aggregated_ground_truth_path = f'{output_path}zeroshot_gt.pkl'
+        max_mb_str = f'_{int(max_size_mb)}_mb' if max_size_mb is not None else ''
+
+        aggregated_pred_proba_path = f'{output_path}zeroshot_pred_proba{max_mb_str}.pkl'
+        aggregated_ground_truth_path = f'{output_path}zeroshot_gt{max_mb_str}.pkl'
         print(f'Saving pred_proba output to {aggregated_pred_proba_path}')
         print(f'Saving ground_truth output to {aggregated_ground_truth_path}')
 
