@@ -1,8 +1,16 @@
+import os
+from pathlib import Path
+
 import pandas as pd
 import warnings
 
 
-def load_task_metadata(path='data/metadata/task_metadata.csv'):
+_PATH_TO_DATA = str(Path(__file__).parent.parent.parent / 'data' / 'metadata')
+
+
+def load_task_metadata(path='task_metadata.csv', path_relative_to_data=True):
+    if path_relative_to_data:
+        path = _PATH_TO_DATA + os.sep + path
     task_metadata = pd.read_csv(path)
     task_metadata['ClassRatio'] = task_metadata['MinorityClassSize'] / task_metadata['NumberOfInstances']
 

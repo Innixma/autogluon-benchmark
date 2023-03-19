@@ -1,0 +1,868 @@
+---
+
+- name: anneal
+  openml_task_id: 2
+
+- name: letter
+  openml_task_id: 6
+
+- name: balance-scale
+  openml_task_id: 11
+
+- name: breast-w
+  openml_task_id: 15
+
+- name: mushroom
+  openml_task_id: 24
+
+- name: nursery
+  openml_task_id: 26
+
+- name: optdigits
+  openml_task_id: 28
+
+- name: page-blocks
+  openml_task_id: 30
+
+- name: pendigits
+  openml_task_id: 32
+
+- name: diabetes
+  openml_task_id: 37
+
+- name: soybean
+  openml_task_id: 41
+
+- name: spambase
+  openml_task_id: 43
+
+- name: splice
+  openml_task_id: 45
+
+- name: tic-tac-toe
+  openml_task_id: 49
+
+- name: waveform-5000
+  openml_task_id: 58
+
+- name: electricity
+  openml_task_id: 219
+
+- name: pokerhand
+  openml_task_id: 223
+
+- name: yeast
+  openml_task_id: 2073
+
+- name: satimage
+  openml_task_id: 2074
+
+- name: abalone
+  openml_task_id: 2075
+
+- name: kropt
+  openml_task_id: 2076
+
+- name: baseball
+  openml_task_id: 2077
+
+- name: meta_stream_intervals.arff
+  openml_task_id: 2276
+
+- name: hypothyroid
+  openml_task_id: 3011
+
+- name: vowel
+  openml_task_id: 3022
+
+- name: isolet
+  openml_task_id: 3481
+
+- name: mammography
+  openml_task_id: 3483
+
+- name: oil_spill
+  openml_task_id: 3484
+
+- name: monks-problems-1
+  openml_task_id: 3492
+
+- name: monks-problems-2
+  openml_task_id: 3493
+
+- name: monks-problems-3
+  openml_task_id: 3494
+
+- name: JapaneseVowels
+  openml_task_id: 3510
+
+- name: synthetic_control
+  openml_task_id: 3512
+
+- name: irish
+  openml_task_id: 3543
+
+- name: analcatdata_authorship
+  openml_task_id: 3549
+
+- name: analcatdata_dmft
+  openml_task_id: 3560
+
+- name: profb
+  openml_task_id: 3561
+
+- name: mnist_784
+  openml_task_id: 3573
+
+- name: fri_c3_1000_25
+  openml_task_id: 3581
+
+- name: rmftsa_ladata
+  openml_task_id: 3583
+
+- name: pol
+  openml_task_id: 3588
+
+- name: bank8FM
+  openml_task_id: 3591
+
+- name: 2dplanes
+  openml_task_id: 3593
+
+- name: analcatdata_supreme
+  openml_task_id: 3594
+
+- name: ailerons
+  openml_task_id: 3600
+
+- name: cpu_small
+  openml_task_id: 3601
+
+- name: space_ga
+  openml_task_id: 3603
+
+- name: fri_c3_1000_10
+  openml_task_id: 3606
+
+- name: fri_c4_500_100
+  openml_task_id: 3608
+
+- name: pm10
+  openml_task_id: 3616
+
+- name: puma32H
+  openml_task_id: 3618
+
+- name: meta
+  openml_task_id: 3623
+
+- name: cpu_act
+  openml_task_id: 3627
+
+- name: strikes
+  openml_task_id: 3636
+
+- name: quake
+  openml_task_id: 3638
+
+- name: fri_c0_1000_5
+  openml_task_id: 3664
+
+- name: pbcseq
+  openml_task_id: 3667
+
+- name: delta_ailerons
+  openml_task_id: 3668
+
+- name: kin8nm
+  openml_task_id: 3672
+
+- name: puma8NH
+  openml_task_id: 3681
+
+- name: delta_elevators
+  openml_task_id: 3684
+
+- name: house_16H
+  openml_task_id: 3686
+
+- name: houses
+  openml_task_id: 3688
+
+- name: boston_corrected
+  openml_task_id: 3690
+
+- name: sensory
+  openml_task_id: 3691
+
+- name: bank32nh
+  openml_task_id: 3698
+
+- name: fri_c1_1000_50
+  openml_task_id: 3702
+
+- name: kdd_el_nino-small
+  openml_task_id: 3704
+
+- name: stock
+  openml_task_id: 3706
+
+- name: elevators
+  openml_task_id: 3711
+
+- name: wind
+  openml_task_id: 3712
+
+- name: pollen
+  openml_task_id: 3735
+
+- name: mv
+  openml_task_id: 3745
+
+- name: fri_c0_500_5
+  openml_task_id: 3747
+
+- name: no2
+  openml_task_id: 3749
+
+- name: colleges_aaup
+  openml_task_id: 3760
+
+- name: fried
+  openml_task_id: 3764
+
+- name: fri_c2_1000_25
+  openml_task_id: 3766
+
+- name: fri_c2_500_50
+  openml_task_id: 3783
+
+- name: visualizing_soil
+  openml_task_id: 3786
+
+- name: colleges_usnews
+  openml_task_id: 3793
+
+- name: socmob
+  openml_task_id: 3797
+
+- name: fri_c3_500_10
+  openml_task_id: 3799
+
+- name: fri_c3_500_50
+  openml_task_id: 3800
+
+- name: water-treatment
+  openml_task_id: 3803
+
+- name: arsenic-male-bladder
+  openml_task_id: 3810
+
+- name: arsenic-female-bladder
+  openml_task_id: 3812
+
+- name: arsenic-female-lung
+  openml_task_id: 3813
+
+- name: arsenic-male-lung
+  openml_task_id: 3814
+
+- name: kdd_internet_usage
+  openml_task_id: 3844
+
+- name: hiva_agnostic
+  openml_task_id: 3892
+
+- name: eye_movements
+  openml_task_id: 3897
+
+- name: mozilla4
+  openml_task_id: 3899
+
+- name: pc3
+  openml_task_id: 3903
+
+- name: jm1
+  openml_task_id: 3904
+
+- name: mc1
+  openml_task_id: 3907
+
+- name: kc2
+  openml_task_id: 3913
+
+- name: pc1
+  openml_task_id: 3918
+
+- name: pc2
+  openml_task_id: 3919
+
+- name: KDDCup09_appetency
+  openml_task_id: 3945
+
+- name: musk
+  openml_task_id: 3950
+
+- name: MagicTelescope
+  openml_task_id: 3954
+
+- name: OVA_Breast
+  openml_task_id: 3962
+
+- name: OVA_Lung
+  openml_task_id: 3964
+
+- name: OVA_Kidney
+  openml_task_id: 3968
+
+- name: OVA_Endometrium
+  openml_task_id: 3976
+
+- name: OVA_Prostate
+  openml_task_id: 3980
+
+- name: OVA_Colon
+  openml_task_id: 3995
+
+- name: OVA_Ovary
+  openml_task_id: 4000
+
+- name: eating
+  openml_task_id: 7307
+
+- name: covertype
+  openml_task_id: 7593
+
+- name: autoUniv-au6-750
+  openml_task_id: 9904
+
+- name: autoUniv-au7-700
+  openml_task_id: 9905
+
+- name: autoUniv-au7-1100
+  openml_task_id: 9906
+
+- name: autoUniv-au1-1000
+  openml_task_id: 9909
+
+- name: volcanoes-e1
+  openml_task_id: 9915
+
+- name: volcanoes-d1
+  openml_task_id: 9920
+
+- name: volcanoes-d4
+  openml_task_id: 9923
+
+- name: volcanoes-a2
+  openml_task_id: 9924
+
+- name: volcanoes-a3
+  openml_task_id: 9925
+
+- name: volcanoes-a4
+  openml_task_id: 9926
+
+- name: volcanoes-b1
+  openml_task_id: 9927
+
+- name: volcanoes-b2
+  openml_task_id: 9928
+
+- name: volcanoes-b5
+  openml_task_id: 9931
+
+- name: volcanoes-b6
+  openml_task_id: 9932
+
+- name: twonorm
+  openml_task_id: 9943
+
+- name: walking-activity
+  openml_task_id: 9945
+
+- name: wdbc
+  openml_task_id: 9946
+
+- name: one-hundred-plants-margin
+  openml_task_id: 9954
+
+- name: ringnorm
+  openml_task_id: 9959
+
+- name: wall-robot-navigation
+  openml_task_id: 9960
+
+- name: semeion
+  openml_task_id: 9964
+
+- name: skin-segmentation
+  openml_task_id: 9965
+
+- name: spoken-arabic-digit
+  openml_task_id: 9966
+
+- name: steel-plates-fault
+  openml_task_id: 9967
+
+- name: hill-valley
+  openml_task_id: 9970
+
+- name: ilpd
+  openml_task_id: 9971
+
+- name: kr-vs-k
+  openml_task_id: 9972
+
+- name: ldpa
+  openml_task_id: 9974
+
+- name: madelon
+  openml_task_id: 9976
+
+- name: cardiotocography
+  openml_task_id: 9979
+
+- name: eeg-eye-state
+  openml_task_id: 9983
+
+- name: amazon-commerce-reviews
+  openml_task_id: 10090
+
+- name: banknote-authentication
+  openml_task_id: 10093
+
+- name: BachChoralHarmony
+  openml_task_id: 14953
+
+- name: cylinder-bands
+  openml_task_id: 14954
+
+- name: artificial-characters
+  openml_task_id: 14963
+
+- name: cjs
+  openml_task_id: 14967
+
+- name: har
+  openml_task_id: 14970
+
+- name: dresses-sales
+  openml_task_id: 125920
+
+- name: LED-display-domain-7digit
+  openml_task_id: 125921
+
+- name: texture
+  openml_task_id: 125922
+
+- name: SpeedDating
+  openml_task_id: 125968
+
+- name: MiceProtein
+  openml_task_id: 146800
+
+- name: collins
+  openml_task_id: 146802
+
+- name: Australian
+  openml_task_id: 146818
+
+- name: climate-model-simulation-crashes
+  openml_task_id: 146819
+
+- name: wilt
+  openml_task_id: 146820
+
+- name: tamilnadu-electricity
+  openml_task_id: 146823
+
+- name: numerai28.6
+  openml_task_id: 167120
+
+- name: Devnagari-Script
+  openml_task_id: 167121
+
+- name: CIFAR_10
+  openml_task_id: 167124
+
+- name: Moneyball
+  openml_task_id: 167210
+
+- name: USPS
+  openml_task_id: 168298
+
+- name: UMIST_Faces_Cropped
+  openml_task_id: 168300
+
+- name: phoneme
+  openml_task_id: 168350
+
+- name: credit-g
+  openml_task_id: 168757
+
+- name: steel-plates-fault
+  openml_task_id: 168784
+
+- name: APSFailure
+  openml_task_id: 168868
+
+- name: dilbert
+  openml_task_id: 168909
+
+- name: fabert
+  openml_task_id: 168910
+
+- name: jasmine
+  openml_task_id: 168911
+
+- name: airlines
+  openml_task_id: 189354
+
+- name: dionis
+  openml_task_id: 189355
+
+- name: albert
+  openml_task_id: 189356
+
+- name: microaggregation2
+  openml_task_id: 189773
+
+- name: gina
+  openml_task_id: 189922
+
+- name: ozone-level-8hr
+  openml_task_id: 190137
+
+- name: vehicle
+  openml_task_id: 190146
+
+- name: madeline
+  openml_task_id: 190392
+
+- name: philippine
+  openml_task_id: 190410
+
+- name: ada
+  openml_task_id: 190411
+
+- name: arcene
+  openml_task_id: 190412
+
+- name: porto-seguro
+  openml_task_id: 211976
+
+- name: Kuzushiji-49
+  openml_task_id: 211978
+
+- name: jannis
+  openml_task_id: 211979
+
+- name: GTSRB-HOG03
+  openml_task_id: 211980
+
+- name: Diabetes130US
+  openml_task_id: 211986
+
+- name: diamonds
+  openml_task_id: 233211
+
+- name: Allstate_Claims_Severity
+  openml_task_id: 233212
+
+- name: Buzzinsocialmedia_Twitter
+  openml_task_id: 233213
+
+- name: Santander_transaction_value
+  openml_task_id: 233214
+
+- name: Mercedes_Benz_Greener_Manufacturing
+  openml_task_id: 233215
+
+- name: Yolanda
+  openml_task_id: 317614
+
+- name: Airlines_DepDelay_10M
+  openml_task_id: 359929
+
+- name: quake
+  openml_task_id: 359930
+
+- name: sensory
+  openml_task_id: 359931
+
+- name: socmob
+  openml_task_id: 359932
+
+- name: space_ga
+  openml_task_id: 359933
+
+- name: tecator
+  openml_task_id: 359934
+
+- name: wine_quality
+  openml_task_id: 359935
+
+- name: elevators
+  openml_task_id: 359936
+
+- name: black_friday
+  openml_task_id: 359937
+
+- name: Brazilian_houses
+  openml_task_id: 359938
+
+- name: topo_2_1
+  openml_task_id: 359939
+
+- name: yprop_4_1
+  openml_task_id: 359940
+
+- name: OnlineNewsPopularity
+  openml_task_id: 359941
+
+- name: colleges
+  openml_task_id: 359942
+
+- name: nyc-taxi-green-dec-2016
+  openml_task_id: 359943
+
+- name: abalone
+  openml_task_id: 359944
+
+- name: us_crime
+  openml_task_id: 359945
+
+- name: pol
+  openml_task_id: 359946
+
+- name: SAT11-HAND-runtime-regression
+  openml_task_id: 359948
+
+- name: house_sales
+  openml_task_id: 359949
+
+- name: boston
+  openml_task_id: 359950
+
+- name: house_prices_nominal
+  openml_task_id: 359951
+
+- name: house_16H
+  openml_task_id: 359952
+
+- name: micro-mass
+  openml_task_id: 359953
+
+- name: eucalyptus
+  openml_task_id: 359954
+
+- name: blood-transfusion-service-center
+  openml_task_id: 359955
+
+- name: qsar-biodeg
+  openml_task_id: 359956
+
+- name: cnae-9
+  openml_task_id: 359957
+
+- name: pc4
+  openml_task_id: 359958
+
+- name: cmc
+  openml_task_id: 359959
+
+- name: car
+  openml_task_id: 359960
+
+- name: mfeat-factors
+  openml_task_id: 359961
+
+- name: kc1
+  openml_task_id: 359962
+
+- name: segment
+  openml_task_id: 359963
+
+- name: dna
+  openml_task_id: 359964
+
+- name: kr-vs-kp
+  openml_task_id: 359965
+
+- name: Internet-Advertisements
+  openml_task_id: 359966
+
+- name: Bioresponse
+  openml_task_id: 359967
+
+- name: churn
+  openml_task_id: 359968
+
+- name: first-order-theorem-proving
+  openml_task_id: 359969
+
+- name: GesturePhaseSegmentationProcessed
+  openml_task_id: 359970
+
+- name: PhishingWebsites
+  openml_task_id: 359971
+
+- name: sylvine
+  openml_task_id: 359972
+
+- name: christine
+  openml_task_id: 359973
+
+- name: wine-quality-white
+  openml_task_id: 359974
+
+- name: Satellite
+  openml_task_id: 359975
+
+- name: Fashion-MNIST
+  openml_task_id: 359976
+
+- name: connect-4
+  openml_task_id: 359977
+
+- name: Amazon_employee_access
+  openml_task_id: 359979
+
+- name: nomao
+  openml_task_id: 359980
+
+- name: jungle_chess_2pcs_raw_endgame_complete
+  openml_task_id: 359981
+
+- name: bank-marketing
+  openml_task_id: 359982
+
+- name: adult
+  openml_task_id: 359983
+
+- name: helena
+  openml_task_id: 359984
+
+- name: volkert
+  openml_task_id: 359985
+
+- name: robert
+  openml_task_id: 359986
+
+- name: shuttle
+  openml_task_id: 359987
+
+- name: guillermo
+  openml_task_id: 359988
+
+- name: riccardo
+  openml_task_id: 359989
+
+- name: MiniBooNE
+  openml_task_id: 359990
+
+- name: kick
+  openml_task_id: 359991
+
+- name: Click_prediction_small
+  openml_task_id: 359992
+
+- name: okcupid-stem
+  openml_task_id: 359993
+
+- name: sf-police-incidents
+  openml_task_id: 359994
+
+- name: KDDCup99
+  openml_task_id: 360112
+
+- name: porto-seguro
+  openml_task_id: 360113
+
+- name: Higgs
+  openml_task_id: 360114
+
+- name: Indian_pines
+  openml_task_id: 360859
+
+- name: QSAR-TID-11
+  openml_task_id: 360932
+
+- name: QSAR-TID-10980
+  openml_task_id: 360933
+
+- name: MIP-2016-regression
+  openml_task_id: 360945
+
+- name: KDDCup09-Upselling
+  openml_task_id: 360975
+
+- name: rl
+  openml_task_id: 361323
+
+- name: GTSRB-HueHist
+  openml_task_id: 361324
+
+- name: GTSRB-HOG02
+  openml_task_id: 361325
+
+- name: GTSRB-HOG01
+  openml_task_id: 361326
+
+- name: Kuzushiji-MNIST
+  openml_task_id: 361327
+
+- name: compas-two-years
+  openml_task_id: 361328
+
+- name: KDD98
+  openml_task_id: 361329
+
+- name: Traffic_violations
+  openml_task_id: 361330
+
+- name: GAMETES_Epistasis_2-Way_1000atts_0.4H_EDM-1_EDM-1_1
+  openml_task_id: 361331
+
+- name: GAMETES_Epistasis_2-Way_20atts_0.1H_EDM-1_1
+  openml_task_id: 361332
+
+- name: GAMETES_Epistasis_2-Way_20atts_0.4H_EDM-1_1
+  openml_task_id: 361333
+
+- name: GAMETES_Epistasis_3-Way_20atts_0.2H_EDM-1_1
+  openml_task_id: 361334
+
+- name: GAMETES_Heterogeneity_20atts_1600_Het_0.4_0.2_50_EDM-2_001
+  openml_task_id: 361335
+
+- name: GAMETES_Heterogeneity_20atts_1600_Het_0.4_0.2_75_EDM-2_001
+  openml_task_id: 361336
+
+- name: mofn-3-7-10
+  openml_task_id: 361337
+
+- name: xd6
+  openml_task_id: 361338
+
+- name: Titanic
+  openml_task_id: 361339
+
+- name: tokyo1
+  openml_task_id: 361340
+
+- name: parity5_plus_5
+  openml_task_id: 361341
+
+- name: Run_or_walk_information
+  openml_task_id: 361342
+
+- name: fars
+  openml_task_id: 361343
+
+- name: led24
+  openml_task_id: 361344
+
+- name: wine-quality-red
+  openml_task_id: 361345
