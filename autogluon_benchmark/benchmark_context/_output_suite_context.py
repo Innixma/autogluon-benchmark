@@ -53,6 +53,7 @@ class OutputSuiteContext:
         if columns_to_keep is None:
             columns_to_keep = DEFAULT_COLUMNS_TO_KEEP
         columns_to_keep = copy.deepcopy(columns_to_keep)
+        self.keep_params = keep_params
         if not keep_params:
             columns_to_keep = [c for c in columns_to_keep if c != 'params']
         self.columns_to_keep = columns_to_keep
@@ -90,7 +91,7 @@ class OutputSuiteContext:
     def load_results(self) -> List[pd.DataFrame]:
         return self._loop_func(func=OutputContext.load_results,
                                input_list=self.output_contexts,
-                               kwargs=dict(include_infer_speed=self.include_infer_speed))
+                               kwargs=dict(include_infer_speed=self.include_infer_speed, keep_params=self.keep_params))
 
     def load_zeroshot_metadata(self, max_size_mb: float = None, allow_exception=False) -> List[dict]:
         return self._loop_func(func=OutputContext.load_zeroshot_metadata,

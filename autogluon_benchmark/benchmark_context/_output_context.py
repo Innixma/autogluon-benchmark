@@ -65,8 +65,10 @@ class OutputContext:
     def path_zeroshot_metadata(self):
         return self.path + 'zeroshot/zeroshot_metadata.pkl'
 
-    def load_results(self, include_infer_speed=False) -> pd.DataFrame:
+    def load_results(self, include_infer_speed=False, keep_params=True) -> pd.DataFrame:
         results = load_pd.load(self.path_results)
+        if not keep_params:
+            results = results.drop(columns=['params'])
         if include_infer_speed:
             try:
                 results = self._merge_results_with_infer_speed(results=results, infer_speed=None)
