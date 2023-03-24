@@ -28,7 +28,20 @@ def preprocess_openml_input(path, framework_suffix=None, framework_rename_dict=N
     raw_input[METRIC_ERROR] = [1 - score if metric in ['auc', 'acc', 'balacc', 'r2'] else -score for score, metric in zip(raw_input[METRIC_SCORE], raw_input['metric'])]
 
     if raw_input[METRIC_ERROR].min() < 0:
-        raise AssertionError(f'METRIC_ERROR cannot be negative! There may be a bug. Found min value: {raw_input[METRIC_ERROR].min()}')
+        # TODO: update values below 0 to 0
+        eps = -1/1e8
+        num_negative = len(raw_input[raw_input[METRIC_ERROR] < 0])
+
+        if raw_input[METRIC_ERROR].min() < eps:
+            raise AssertionError(f'METRIC_ERROR cannot be negative! There may be a bug. '
+                                 f'Found min value: {raw_input[METRIC_ERROR].min()}. '
+                                 f'{num_negative} rows had negative values!')
+        else:
+            print(f'WARNING: min METRIC_ERROR was found to be negative, but was higher than epsilon {eps}! '
+                  f'({raw_input[METRIC_ERROR].min()}) {num_negative} rows had negative values! '
+                  f'Setting all negative values to 0.')
+            raw_input.loc[raw_input[METRIC_ERROR] < 0, METRIC_ERROR] = 0
+    assert raw_input[METRIC_ERROR].min() >= 0
 
     cleaned_input = preprocess_utils.clean_result(raw_input, folds_to_keep=folds_to_keep, remove_invalid=False)
 

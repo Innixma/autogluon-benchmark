@@ -26,9 +26,21 @@ class BenchmarkEvaluator:
             framework_nan_fill = None
         self._framework_nan_fill = framework_nan_fill
 
-    def _load_results(self, paths: list) -> pd.DataFrame:
+    def _load_results(self, paths: list, clean_data: bool = False, banned_datasets: list = None) -> pd.DataFrame:
         paths = [path if is_s3_url(path) else self.results_dir_input + path for path in paths]
         results_raw = pd.concat([pd.read_csv(path) for path in paths], ignore_index=True, sort=True)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore')
+            results_raw['time_infer_s'][results_raw['time_infer_s'] == 0] = 0.001
+        if clean_data:
+            # FIXME: This doesn't work on new tasks due to not comprehensive metadata
+            results_raw = self._clean_data(results_raw=results_raw)
+        if banned_datasets is not None:
+            results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
+        if self._use_tid_as_dataset_name:
+            results_raw['dataset'] = results_raw['tid'].astype(int).astype(str)
+            if banned_datasets is not None:
+                results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
         results_raw = results_raw.drop_duplicates(subset=['framework', 'dataset', 'fold'])
         self._check_results_valid(results_raw=results_raw)
         return results_raw
@@ -47,15 +59,9 @@ class BenchmarkEvaluator:
                   infer_batch_size: int = None,
                   treat_folds_as_datasets: bool = False,
                   ) -> pd.DataFrame:
-        results_raw = self._load_results(paths=paths)
+        results_raw = self._load_results(paths=paths, clean_data=clean_data, banned_datasets=banned_datasets)
         if folds is not None:
             results_raw = results_raw[results_raw['fold'].isin(folds)]
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore')
-            results_raw['time_infer_s'][results_raw['time_infer_s'] == 0] = 0.001
-        if clean_data:
-            # FIXME: This doesn't work on new tasks due to not comprehensive metadata
-            results_raw = self._clean_data(results_raw=results_raw)
         if problem_type is not None:
             if isinstance(problem_type, list):
                 results_raw = results_raw[results_raw['problem_type'].isin(problem_type)]
@@ -81,7 +87,9 @@ class BenchmarkEvaluator:
             results_raw = self.filter_errors(results_raw=results_raw, folds=folds)
         if frameworks is not None:
             frameworks_present = list(results_raw['framework'].unique())
-            assert set(frameworks) == set(frameworks_present)
+            if set(frameworks) != set(frameworks_present):
+                diff = list(set(frameworks).symmetric_difference(set(frameworks_present)))
+                raise AssertionError(f'Difference in expected frameworks present: {diff}')
         return results_raw
 
     def _clean_data(self, results_raw):
