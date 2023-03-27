@@ -10,11 +10,15 @@ Generated from `autogluon_benchmark.metadata.metadata_generator.generate_metadat
 
 Contains the AutoMLBenchmark 104 datasets (study 271 and 269), plus the 208 datasets from study 293.
 
-These 312 datasets were then deduped by `did` resulting in 289 datasets.
+These 312 datasets were then deduped by `did` resulting in 279 datasets.
 
 Then, all tasks were standardized to `10-fold Crossvalidation` estimation_procedure (`estimation_procedure_id=1`)
 
-Note that these 289 datasets might need further cleaning, as some datasets from study 293 appear to be corrupted.
+Note that these 279 datasets might need further cleaning, as some datasets from study 293 appear to be corrupted.
+
+(Named 289 because originally there were 289 datasets, but have since been further deduped to 279)
+
+You can regenerate this file by running `scripts/run_gen_task_metadata_289.py`.
 
 ### task_metadata_old.csv
 
