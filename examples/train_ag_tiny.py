@@ -2,9 +2,11 @@
 import numpy as np
 import pandas as pd
 
+from autogluon.common.loaders import load_pd
 from autogluon.common.savers import save_pd
 
-from autogluon_benchmark.tasks import task_loader, task_utils
+from autogluon_benchmark.evaluation.evaluate_utils import compare_frameworks
+from autogluon_benchmark.tasks import task_utils
 from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
 
 
@@ -69,7 +71,6 @@ def run_configs(task_names, task_metadata, n_folds, configs):
 
 if __name__ == "__main__":
     save_path_prefix = 'out/ag_tiny/'
-    task_dict = task_loader.get_task_dict(['ag_tiny.yaml'])
     task_metadata = load_task_metadata('task_metadata_289.csv')
     task_metadata = task_metadata.drop_duplicates(subset=['name'])
     task_metadata_tiny = task_metadata[task_metadata['NumberOfInstances'] <= 1000]
@@ -83,9 +84,11 @@ if __name__ == "__main__":
 
     n_folds = [0]
     num_datasets = 10
+    task_names = task_names[:num_datasets]
+    # task_names = ['synthetic_control']
+    # task_names = ['monks-problems-1']
+    # task_names = ['irish']
 
-    print(len(task_dict.keys()))
-    task_names = list(task_dict.keys())[:num_datasets]
     print(task_names)
 
     config1 = dict(
@@ -113,3 +116,11 @@ if __name__ == "__main__":
 
     save_path_df = save_path_prefix + 'result.csv'
     save_pd.save(path=save_path_df, df=df_final)
+
+    df_renamed = df_final.rename(columns=dict(
+        name='framework',
+        task_name='dataset',
+        time_fit='time_train_s',
+        test_error='metric_error',
+    ))
+    out = compare_frameworks(results_raw=df_renamed)
