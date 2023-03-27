@@ -14,6 +14,7 @@ def result(*,
            time_fit=None,
            time_predict=None,
            test_score=None,
+           val_score=None,
            test_error=None,
            eval_metric=None,
            **others):
@@ -82,6 +83,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
     leaderboard = predictor.leaderboard(**leaderboard_kwargs)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
         print(leaderboard)
+    score_val = leaderboard[leaderboard['model'] == predictor.get_model_best()]['score_val'].iloc[0]
 
     models_count = len(leaderboard)
 
@@ -96,6 +98,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
         time_predict=timer_predict.duration,
         # extra
         test_score=test_score,
+        val_score=score_val,
         test_error=test_error,
         eval_metric=eval_metric,
         predictor=predictor,

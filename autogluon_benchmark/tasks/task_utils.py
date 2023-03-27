@@ -1,10 +1,14 @@
 import openml
 import time
 
+import pandas as pd
+
 from openml.exceptions import OpenMLServerException
 
 from ..frameworks.autogluon.run import run
 from ..utils.data_utils import convert_to_raw
+
+from autogluon.common.savers import save_pd, save_json
 
 
 def get_task(task_id: int):
@@ -30,25 +34,76 @@ def get_ag_problem_type(task):
     return problem_type
 
 
+def get_task_with_retry(task_id: int, max_delay_exp: int = 8):
+    delay_exp = 0
+    while True:
+        try:
+            print(f'Getting task {task_id}')
+            task = get_task(task_id=task_id)
+            print(f'Got task {task_id}')
+            return task
+        except OpenMLServerException as e:
+            delay = 2 ** delay_exp
+            delay_exp += 1
+            if delay_exp > max_delay_exp:
+                raise ValueError("Unable to get task after 10 retries")
+            print(e)
+            print(f'Retry in {delay}s...')
+            time.sleep(delay)
+            continue
+
+
+def get_task_data(task):
+    X, y, _, _ = task.get_dataset().get_data(task.target_name)
+    return X, y
+
+
+class TaskWrapper:
+    def __init__(self, task):
+        self.task = task
+        self.X, self.y = get_task_data(task=self.task)
+        self.problem_type = get_ag_problem_type(self.task)
+        self.label = self.task.target_name
+
+    @classmethod
+    def from_task_id(cls, task_id: int):
+        task = get_task_with_retry(task_id=task_id)
+        return cls(task)
+
+    def combine_X_y(self):
+        return pd.concat([self.X, self.y.to_frame(name=self.label)], axis=1)
+
+    def save_data(self, path: str, file_type='.csv', train_indices=None, test_indices=None):
+        data = self.combine_X_y()
+        if train_indices is not None and test_indices is not None:
+            train_data = data.loc[train_indices]
+            test_data = data.loc[test_indices]
+            save_pd.save(f"{path}train{file_type}", train_data)
+            save_pd.save(f"{path}test{file_type}", test_data)
+        else:
+            save_pd.save(f"{path}data{file_type}", data)
+
+    def save_metadata(self, path: str):
+        metadata = dict(
+            label=self.label,
+            problem_type=self.problem_type,
+            num_rows=len(self.X),
+            num_cols=len(self.X.columns),
+            task_id=self.task.task_id,
+            dataset_id=self.task.dataset_id,
+            openml_url=self.task.openml_url,
+        )
+        path_full = f"{path}metadata.json"
+        save_json.save(path=path_full, obj=metadata)
+
+    def get_split_indices(self, repeat=0, fold=0, sample=0):
+        train_indices, test_indices = self.task.get_train_test_split_indices(repeat=repeat, fold=fold, sample=sample)
+        return train_indices, test_indices
+
+
 def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_args=None, print_leaderboard=True):
     if isinstance(task, int):
-        task_id = task
-        delay_exp = 0
-        while True:
-            try:
-                print(f'Getting task {task_id}')
-                task = openml.tasks.get_task(task_id)
-                print(f'Got task {task_id}')
-            except OpenMLServerException as e:
-                delay = 2 ** delay_exp
-                delay_exp += 1
-                if delay_exp > 10:
-                    raise ValueError("Unable to get task after 10 retries")
-                print(e)
-                print(f'Retry in {delay}s...')
-                time.sleep(delay)
-                continue
-            break
+        task = get_task_with_retry(task)
 
     problem_type = get_ag_problem_type(task)
     n_repeats_full, n_folds_full, n_samples_full = task.get_split_dimensions()
@@ -59,7 +114,7 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_a
     if n_samples is None:
         n_samples = n_samples_full
 
-    X, y, _, _ = task.get_dataset().get_data(task.target_name)
+    X, y = get_task_data(task=task)
     # X = convert_to_raw(X)
     results = []
     if isinstance(n_folds, int):
