@@ -112,6 +112,14 @@ def evaluate(results_raw, frameworks=None, banned_datasets=None, folds_to_keep=N
             for dataset in datasets_pair:
                 results_isolated = results_ranked_by_dataset[results_ranked_by_dataset[DATASET] == dataset]
 
+                if len(results_isolated) != 2:
+                    print(f'Found invalid results_isolated! Printing:')
+                    with pd.option_context('display.max_columns', None, 'display.width', 1000):
+                        print(results_isolated)
+                    raise AssertionError("results_isolated is not of expected length 2! "
+                                         f"Actual len: {len(results_isolated)} | dataset={dataset} | "
+                                         f"framework_1={framework_1} | framework_2={framework_2}")
+
                 if calc_inf_diff:
                     inf_1 = results_isolated[results_isolated[FRAMEWORK] == framework_1][time_infer_s_rescaled].iloc[0]
                     inf_2 = results_isolated[results_isolated[FRAMEWORK] == framework_2][time_infer_s_rescaled].iloc[0]
