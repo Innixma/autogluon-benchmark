@@ -11,64 +11,71 @@ def run(
         problem_type=None,
 ):
     results_dir = 'data/results/'
+    s3_input_dir = 's3://autogluon-zeroshot/benchmark_baselines/results/input/prepared/openml'
 
     paths = [
-        'openml_ag_2022_06_19.csv',  # 1h8c bq hq gq mq 0.5 pre
-        'openml_ag_2022_06_19_nn.csv',  # 1h8c bq hq gq mq 0.5 pre with nn num_cpus opt
-        'openml_ag_2022_06_19_models.csv',  # 1h8c bq hq gq mq 0.5 pre
-        'openml_ag_2022_06_19_nn_models.csv',  # 1h8c bq hq gq mq 0.5 pre with nn num_cpus opt
-        'openml_ag_2022_06_21.csv',  # 4h64c bq hq gq mq 0.5 pre
-        'openml_ag_2022_06_21_nn.csv',  # 4h64c bq hq gq mq 0.5 pre with nn num_cpus opt
-        'openml_ag_2022_06_21_models.csv',  # 4h64c bq hq gq mq 0.5 pre
-        'openml_ag_2022_06_21_nn_models.csv',  # 4h64c bq hq gq mq 0.5 pre with nn num_cpus opt
-        'openml_ag_2022_06_25_nn.csv',  # 4h64c bq mq 0.5 pre with nn num_cpus opt
-        'openml_ag_2022_06_25_nn_models.csv',  # 4h64c bq mq 0.5 pre with nn num_cpus opt
-        'openml_ag_2022_06_26_binary.csv',  # 1h8c bq hq gq mq with binary no stack
-        'openml_ag_2022_06_26_binary_models.csv',  # 1h8c bq hq gq mq with binary no stack
-        'amlb/2022_jmlr.csv',  # gjibers et al
-        'openml_ag_2022_07_12_torch.csv',  # 1h8c bq hq gq mq torch 1.12
-        'openml_ag_2022_07_12_torch_models.csv',  # 1h8c bq hq gq mq torch 1.12
-        'openml_ag_2022_07_26_i001.csv',
-        'openml_ag_2022_07_26_i001_2.csv',
-        'openml_ag_2022_09_30_gbm_zs_models.csv',
-        'openml_ag_2022_09_30_cat_zs_models.csv',
-        'openml_ag_2022_10_02_zs_models.csv',
-        'openml_ag_2022_10_05_zs_models.csv',
-        'zeroshot/zeroshot_lightgbm.csv',
-        'zeroshot/zeroshot_all.csv',
-        'zeroshot/zeroshot_all_v2.csv',
-        'zeroshot/zeroshot_all_v2_25.csv',
-        'zeroshot/zeroshot_all_v3_20.csv',
-        'zeroshot/zeroshot_all_v4_14.csv',
-        'zeroshot/zeroshot_all_v4_20.csv',
-        'zeroshot/zeroshot_all_v4_32.csv',
-        'zeroshot/zeroshot_all_rf_v4_7.csv',
-        'zeroshot/zeroshot_all_rf_v4_1fold_10.csv',
-        'zeroshot/zeroshot_all_rf_v4_9fold_7.csv',
-        'zeroshot/zeroshot_all_CV.csv',
-        'zeroshot/zeroshot_all_CV_10.csv',
-        'zeroshot/zeroshot_v2_CV2.csv',
-        'zeroshot/zeroshot_v2_CV2_5.csv',
-        'zeroshot/zeroshot_v2_CV2_10_VS.csv',
-        'zeroshot/zeroshot_v2_CV5_20_VS.csv',
-        'zeroshot/ag_sim_v1.csv',
-        'zeroshot/ag_sim_v1_custom.csv',
-        'openml_ag_2022_10_04_zs.csv',
-        'openml_ag_2022_10_13_zs_models.csv',
+        # 'openml_ag_2022_06_19.csv',  # 1h8c bq hq gq mq 0.5 pre
+        # 'openml_ag_2022_06_19_nn.csv',  # 1h8c bq hq gq mq 0.5 pre with nn num_cpus opt
+        # 'openml_ag_2022_06_19_models.csv',  # 1h8c bq hq gq mq 0.5 pre
+        # 'openml_ag_2022_06_19_nn_models.csv',  # 1h8c bq hq gq mq 0.5 pre with nn num_cpus opt
+        # 'openml_ag_2022_06_21.csv',  # 4h64c bq hq gq mq 0.5 pre
+        # 'openml_ag_2022_06_21_nn.csv',  # 4h64c bq hq gq mq 0.5 pre with nn num_cpus opt
+        # 'openml_ag_2022_06_21_models.csv',  # 4h64c bq hq gq mq 0.5 pre
+        # 'openml_ag_2022_06_21_nn_models.csv',  # 4h64c bq hq gq mq 0.5 pre with nn num_cpus opt
+        # 'openml_ag_2022_06_25_nn.csv',  # 4h64c bq mq 0.5 pre with nn num_cpus opt
+        # 'openml_ag_2022_06_25_nn_models.csv',  # 4h64c bq mq 0.5 pre with nn num_cpus opt
+        # 'openml_ag_2022_06_26_binary.csv',  # 1h8c bq hq gq mq with binary no stack
+        # 'openml_ag_2022_06_26_binary_models.csv',  # 1h8c bq hq gq mq with binary no stack
+        # 'amlb/2022_jmlr.csv',  # gjibers et al
+        # 'openml_ag_2022_07_12_torch.csv',  # 1h8c bq hq gq mq torch 1.12
+        # 'openml_ag_2022_07_12_torch_models.csv',  # 1h8c bq hq gq mq torch 1.12
+        # 'openml_ag_2022_07_26_i001.csv',
+        # 'openml_ag_2022_07_26_i001_2.csv',
+        # 'openml_ag_2022_09_30_gbm_zs_models.csv',
+        # 'openml_ag_2022_09_30_cat_zs_models.csv',
+        # 'openml_ag_2022_10_02_zs_models.csv',
+        # 'openml_ag_2022_10_05_zs_models.csv',
+        # 'zeroshot/zeroshot_lightgbm.csv',
+        # 'zeroshot/zeroshot_all.csv',
+        # 'zeroshot/zeroshot_all_v2.csv',
+        # 'zeroshot/zeroshot_all_v2_25.csv',
+        # 'zeroshot/zeroshot_all_v3_20.csv',
+        # 'zeroshot/zeroshot_all_v4_14.csv',
+        # 'zeroshot/zeroshot_all_v4_20.csv',
+        # 'zeroshot/zeroshot_all_v4_32.csv',
+        # 'zeroshot/zeroshot_all_rf_v4_7.csv',
+        # 'zeroshot/zeroshot_all_rf_v4_1fold_10.csv',
+        # 'zeroshot/zeroshot_all_rf_v4_9fold_7.csv',
+        # 'zeroshot/zeroshot_all_CV.csv',
+        # 'zeroshot/zeroshot_all_CV_10.csv',
+        # 'zeroshot/zeroshot_v2_CV2.csv',
+        # 'zeroshot/zeroshot_v2_CV2_5.csv',
+        # 'zeroshot/zeroshot_v2_CV2_10_VS.csv',
+        # 'zeroshot/zeroshot_v2_CV5_20_VS.csv',
+        # 'zeroshot/ag_sim_v1.csv',
+        # 'zeroshot/ag_sim_v1_custom.csv',
+        # 'openml_ag_2022_10_04_zs.csv',
+        # 'openml_ag_2022_10_13_zs_models.csv',
+        #
+        # 'openml_ag_2022_09_14.csv',  # Bingzhao
+        # 'openml_ag_2022_09_14_v2.csv',  # Bingzhao with BQ
+        # 'openml_ag_2022_09_14_v3.csv',  # Bingzhao with BQ
+        #
+        # 'openml_ag_2022_12_11_zs_models.csv',
 
         'openml_ag_2022_09_14.csv',  # Bingzhao
         'openml_ag_2022_09_14_v2.csv',  # Bingzhao with BQ
         'openml_ag_2022_09_14_v3.csv',  # Bingzhao with BQ
 
-        'openml_ag_2022_12_11_zs_models.csv',
-
-        'zeroshot/zeroshot_SingleBestCV.csv',
-        'zeroshot/zeroshot_EnsembleCV.csv',
-        'zeroshot/zeroshot_EnsembleTrueCV.csv',
-
     ]
 
-    use_tid_as_dataset_name = True
+    paths_ensbag289 = [
+        f's3://autogluon-zeroshot/config_results/zs_EnsBag289_C608_F3_CV_S{i+1}.csv' for i in range(40)
+    ]
+
+    paths = paths + paths_ensbag289
+
+    use_tid_as_dataset_name = False
     clean_data = True
 
     benchmark_evaluator = BenchmarkEvaluator(
@@ -76,6 +83,7 @@ def run(
         output_suffix=output_suffix,
         use_tid_as_dataset_name=use_tid_as_dataset_name,
         filter_errors=True,
+        task_metadata='task_metadata_244.csv',
     )
 
     folds_to_keep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -262,7 +270,11 @@ def run(
 
 
 if __name__ == '__main__':
+    import time
+    ts = time.time()
     problem_types = ['binary', 'multiclass', 'regression']
     run(
         output_suffix=f'2022_amlb_jmlr/1h8c/all',
     )
+    te = time.time()
+    print(f'Time Taken to Evaluate: {te-ts:.2f}s')

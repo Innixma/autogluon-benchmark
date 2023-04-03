@@ -119,17 +119,17 @@ class BenchmarkEvaluator:
         results_raw = pd.concat([pd.read_csv(path) for path in paths], ignore_index=True, sort=True)
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore')
-            results_raw['time_infer_s'][results_raw['time_infer_s'] == 0] = 0.001
+            results_raw[TIME_INFER_S][results_raw[TIME_INFER_S] == 0] = 0.001
         if clean_data:
             # FIXME: This doesn't work on new tasks due to not comprehensive metadata
             results_raw = self._clean_data(results_raw=results_raw)
         if banned_datasets is not None:
-            results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
+            results_raw = results_raw[~results_raw[DATASET].isin(banned_datasets)]
         if self._use_tid_as_dataset_name:
-            results_raw['dataset'] = results_raw['tid'].astype(int).astype(str)
+            results_raw[DATASET] = results_raw['tid'].astype(int).astype(str)
             if banned_datasets is not None:
-                results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
-        results_raw = results_raw.drop_duplicates(subset=['framework', 'dataset', 'fold'])
+                results_raw = results_raw[~results_raw[DATASET].isin(banned_datasets)]
+        results_raw = results_raw.drop_duplicates(subset=[FRAMEWORK, DATASET, FOLD])
         self._check_results_valid(results_raw=results_raw)
         return results_raw
 
@@ -138,9 +138,10 @@ class BenchmarkEvaluator:
             eps = -1 / 1e8
             num_negative = len(results_raw[results_raw[METRIC_ERROR] < 0])
             if results_raw[METRIC_ERROR].min() < eps:
-                raise AssertionError(f'METRIC_ERROR cannot be negative! There may be a bug. Found min value: {results_raw[METRIC_ERROR].min()}')
+                raise AssertionError(f'{METRIC_ERROR} cannot be negative! There may be a bug. '
+                                     f'Found min value: {results_raw[METRIC_ERROR].min()}')
             else:
-                print(f'WARNING: min METRIC_ERROR was found to be negative, but was higher than epsilon {eps}! '
+                print(f'WARNING: min {METRIC_ERROR} was found to be negative, but was higher than epsilon {eps}! '
                       f'({results_raw[METRIC_ERROR].min()}) {num_negative} rows had negative values! '
                       f'Setting all negative values to 0.')
                 results_raw.loc[results_raw[METRIC_ERROR] < 0, METRIC_ERROR] = 0
@@ -199,8 +200,15 @@ class BenchmarkEvaluator:
         # FIXME: TEMP
         results_raw = results_raw.drop(columns=[DATASET])
         results_raw['tid'] = results_raw['tid'].astype(int)
+        pre_unique_tid = len(results_raw['tid'].unique())
         # results_raw['dataset'] = results_raw['dataset'].map({'numerai28_6': 'numerai28.6'}).fillna(results_raw['dataset'])
         results_raw = results_raw.merge(task_metadata[['NumberOfInstances', DATASET, 'tid']], on='tid')
+
+        post_unique_tid = len(results_raw['tid'].unique())
+
+        print(f'Joined with task_metadata ({self._task_metadata_path}), '
+              f'filtered task IDs: {pre_unique_tid} -> {post_unique_tid}')
+
         # FIXME: TEMP
         results_raw[TIME_INFER_S] = results_raw[TIME_INFER_S] / results_raw['NumberOfInstances'] * 10
         return results_raw

@@ -5,6 +5,8 @@ import pandas as pd
 
 from autogluon.common.savers import save_pd
 
+from autogluon_benchmark.metadata.metadata_loader import _PATH_TO_DATA
+
 
 if __name__ == '__main__':
     print('loading complete task list')
@@ -87,7 +89,7 @@ if __name__ == '__main__':
     print(task_metadata_final)
 
     assert len(task_metadata_final) == len(task_metadata_og)
-    save_pd.save(path='data/metadata/task_metadata_289.csv', df=task_metadata_final)
+    save_pd.save(path=f'{_PATH_TO_DATA}/task_metadata_289.csv', df=task_metadata_final)
 
 
     # openml.config.apikey = None  # Add API key to add datasets
