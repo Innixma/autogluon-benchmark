@@ -1,10 +1,13 @@
+from collections import defaultdict
+from typing import Optional, List
 import warnings
 
+import numpy as np
 import pandas as pd
 
 from autogluon.common.utils.s3_utils import is_s3_url
 
-from ..constants import TIME_INFER_S, METRIC_ERROR
+from ..constants import TIME_INFER_S, METRIC_ERROR, METRIC, FRAMEWORK, DATASET, FOLD, PROBLEM_TYPE, TIME_TRAIN_S
 from ..preprocess.preprocess_utils import fill_missing_results_with_default, convert_folds_into_separate_datasets
 from ...metadata.metadata_loader import load_task_metadata
 
@@ -15,16 +18,101 @@ class BenchmarkEvaluator:
                  output_suffix='ag_full_v5/1h8c',
                  use_tid_as_dataset_name: bool = False,
                  filter_errors: bool = False,
-                 framework_nan_fill: str = None,
+                 framework_nan_fill: Optional[str] = None,
+                 task_metadata: str = 'task_metadata_289.csv',
+                 filter_columns: bool = True,
+                 columns_to_keep: Optional[List[str]] = None,
+                 columns_to_keep_extra: Optional[List[str]] = None,
                  ):
+        """
+        # TODO: Describe purpose of class
+        # TODO: Add docstring for `load_data`
+        # TODO: rename `results_raw` to be more descriptive
+
+        Parameters
+        ----------
+        results_dir: str, default = 'data/results/'
+            # TODO: Add docstring
+        output_suffix: str, default = 'ag_full_v5/1h8c'
+            # TODO: Add docstring
+        use_tid_as_dataset_name : bool, default = False
+            If True, replaces `dataset` value with the `tid` value.
+            Only valid when the results come from OpenML tasks.
+            This is useful if `dataset` value is not globally unique but `tid` is,
+            to avoid datasets with the same name being considered the same task.
+        filter_errors : bool, default = False
+            If True, any dataset that has a failure in any of the listed frameworks will be filtered out of all results.
+                This means that there will be 0 errors for any framework in the returned results (dense representation).
+            If False, datasets will not be filtered as long as they have at least 1 framework that did not fail on them.
+        framework_nan_fill : Optional[str], default = None
+            If specified, the value should refer to a framework used as the fill value for any other framework errors.
+            If a framework had an error on a dataset,
+            its result will be set to the result of the `framework_nan_fill` framework for that dataset.
+            For example, if `framework_nan_fill='constantpredictor'`,
+            framework dataset errors will be set to the `constantpredictor` framework result.
+            This is aligned with how results were computed in the 2022 AMLB paper.
+            This value is ignored if `filter_errors=True`, as the errors will already be filtered prior to this logic.
+        task_metadata: str, default = 'task_metadata_289.csv'
+            The path to task metadata file.
+            This is only used when `clean_data=True` when calling `self.load_data`.
+            This is used to filter to `tid` in `task_metadata` and join to get additional columns.
+            This ensures that only datasets present in `task_metadata` will be used for analysis.
+        filter_columns : bool, default = True
+            If True, uses `columns_to_keep` and `extra_columns_to_keep` to filter columns in the output of `load_data`.
+        columns_to_keep : Optional[List[str]], default = None
+            Columns to filter to if `filter_columns=True`.
+            If None, will use the default columns:
+                DATASET
+                FOLD
+                FRAMEWORK
+                METRIC_ERROR
+                METRIC
+                PROBLEM_TYPE
+                TIME_TRAIN_S
+                TIME_INFER_S
+        columns_to_keep_extra : Optional[List[str]], default = None
+            Extra columns to filter to if `filter_columns=True`.
+            Will be concatenated with `columns_to_keep` if specified.
+            This is used as a convenience argument to avoid having to respecify all
+            standard columns when adding a new output column.
+        """
+        if columns_to_keep is None:
+            columns_to_keep = [
+                DATASET,
+                FOLD,
+                FRAMEWORK,
+                METRIC_ERROR,
+                METRIC,
+                PROBLEM_TYPE,
+                TIME_TRAIN_S,
+                TIME_INFER_S,
+            ]
+        if columns_to_keep_extra is None:
+            columns_to_keep_extra = []
+
+        columns_to_keep = columns_to_keep + columns_to_keep_extra
+        columns_to_keep_unique = set(columns_to_keep)
+        if len(columns_to_keep_unique) != len(columns_to_keep):
+            col_count_dict = defaultdict(int)
+            for c in columns_to_keep:
+                col_count_dict[c] += 1
+            raise ValueError(f'Columns cannot be listed multiple times across '
+                             f'columns_to_keep and extra_columns_to_keep!'
+                             f'\n\tcolumn counts:\n\t\t{col_count_dict}')
+
         self.results_dir = results_dir
         self.results_dir_input = results_dir + 'input/prepared/openml/'
         self.results_dir_output = results_dir + f'output/openml/{output_suffix}/'
         self._use_tid_as_dataset_name = use_tid_as_dataset_name
         self._filter_errors = filter_errors
+        self._task_metadata_path = task_metadata
         if self._filter_errors:
             framework_nan_fill = None
         self._framework_nan_fill = framework_nan_fill
+        if filter_columns:
+            self._columns_to_keep = columns_to_keep
+        else:
+            self._columns_to_keep = None
 
     def _load_results(self, paths: list, clean_data: bool = False, banned_datasets: list = None) -> pd.DataFrame:
         paths = [path if is_s3_url(path) else self.results_dir_input + path for path in paths]
@@ -47,7 +135,15 @@ class BenchmarkEvaluator:
 
     def _check_results_valid(self, results_raw: pd.DataFrame):
         if results_raw[METRIC_ERROR].min() < 0:
-            raise AssertionError(f'METRIC_ERROR cannot be negative! There may be a bug. Found min value: {results_raw[METRIC_ERROR].min()}')
+            eps = -1 / 1e8
+            num_negative = len(results_raw[results_raw[METRIC_ERROR] < 0])
+            if results_raw[METRIC_ERROR].min() < eps:
+                raise AssertionError(f'METRIC_ERROR cannot be negative! There may be a bug. Found min value: {results_raw[METRIC_ERROR].min()}')
+            else:
+                print(f'WARNING: min METRIC_ERROR was found to be negative, but was higher than epsilon {eps}! '
+                      f'({results_raw[METRIC_ERROR].min()}) {num_negative} rows had negative values! '
+                      f'Setting all negative values to 0.')
+                results_raw.loc[results_raw[METRIC_ERROR] < 0, METRIC_ERROR] = 0
 
     def load_data(self,
                   paths: list,
@@ -61,19 +157,19 @@ class BenchmarkEvaluator:
                   ) -> pd.DataFrame:
         results_raw = self._load_results(paths=paths, clean_data=clean_data, banned_datasets=banned_datasets)
         if folds is not None:
-            results_raw = results_raw[results_raw['fold'].isin(folds)]
+            results_raw = results_raw[results_raw[FOLD].isin(folds)]
         if problem_type is not None:
             if isinstance(problem_type, list):
-                results_raw = results_raw[results_raw['problem_type'].isin(problem_type)]
+                results_raw = results_raw[results_raw[PROBLEM_TYPE].isin(problem_type)]
             else:
-                results_raw = results_raw[results_raw['problem_type'] == problem_type]
+                results_raw = results_raw[results_raw[PROBLEM_TYPE] == problem_type]
             print(f'Filtering to the following problem_type: {problem_type}')
         if banned_datasets is not None:
-            results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
+            results_raw = results_raw[~results_raw[DATASET].isin(banned_datasets)]
         if self._use_tid_as_dataset_name:
-            results_raw['dataset'] = results_raw['tid'].astype(int).astype(str)
+            results_raw[DATASET] = results_raw['tid'].astype(int).astype(str)
             if banned_datasets is not None:
-                results_raw = results_raw[~results_raw['dataset'].isin(banned_datasets)]
+                results_raw = results_raw[~results_raw[DATASET].isin(banned_datasets)]
         if infer_batch_size is not None:
             results_raw = self._update_infer_batch_size(results_raw=results_raw, infer_batch_size=infer_batch_size)
         if self._framework_nan_fill is not None:
@@ -86,19 +182,25 @@ class BenchmarkEvaluator:
         if self._filter_errors:
             results_raw = self.filter_errors(results_raw=results_raw, folds=folds)
         if frameworks is not None:
-            frameworks_present = list(results_raw['framework'].unique())
+            frameworks_present = list(results_raw[FRAMEWORK].unique())
             if set(frameworks) != set(frameworks_present):
                 diff = list(set(frameworks).symmetric_difference(set(frameworks_present)))
                 raise AssertionError(f'Difference in expected frameworks present: {diff}')
+        # Round error
+        results_raw[METRIC_ERROR] = results_raw[METRIC_ERROR].round(decimals=4)
+
+        if self._columns_to_keep:
+            results_raw = results_raw[self._columns_to_keep]
         return results_raw
 
     def _clean_data(self, results_raw):
-        task_metadata = load_task_metadata()
-        task_metadata['dataset'] = task_metadata['name']
+        task_metadata = load_task_metadata(path=self._task_metadata_path)
+        task_metadata[DATASET] = task_metadata['name']
         # FIXME: TEMP
-        results_raw = results_raw.drop(columns=['tid'])
-        results_raw['dataset'] = results_raw['dataset'].map({'numerai28_6': 'numerai28.6'}).fillna(results_raw['dataset'])
-        results_raw = results_raw.merge(task_metadata[['NumberOfInstances', 'dataset', 'tid']], on='dataset')
+        results_raw = results_raw.drop(columns=[DATASET])
+        results_raw['tid'] = results_raw['tid'].astype(int)
+        # results_raw['dataset'] = results_raw['dataset'].map({'numerai28_6': 'numerai28.6'}).fillna(results_raw['dataset'])
+        results_raw = results_raw.merge(task_metadata[['NumberOfInstances', DATASET, 'tid']], on='tid')
         # FIXME: TEMP
         results_raw[TIME_INFER_S] = results_raw[TIME_INFER_S] / results_raw['NumberOfInstances'] * 10
         return results_raw

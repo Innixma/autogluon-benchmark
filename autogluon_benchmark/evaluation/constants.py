@@ -13,6 +13,7 @@ RANK = 'rank'
 
 METRIC_ERROR = 'metric_error'
 METRIC_SCORE = 'metric_score'
+METRIC = 'metric'
 PROBLEM_TYPE = 'problem_type'
 
 NUM_CLASSES = 'num_classes'
