@@ -1,5 +1,5 @@
 import copy
-from typing import List
+from typing import List, Optional, Set
 
 import numpy as np
 import pandas as pd
@@ -16,8 +16,9 @@ DEFAULT_COLUMNS_TO_KEEP = ['id', 'task', 'framework', 'constraint', 'fold', 'typ
 class OutputSuiteContext:
     def __init__(self,
                  path: str,
-                 contains: str = None,
-                 columns_to_keep: List[str] = None,
+                 contains: Optional[str] = None,
+                 allowed_tids: Optional[Set[int]] = None,
+                 columns_to_keep: Optional[List[str]] = None,
                  include_infer_speed: bool = False,
                  keep_params: bool = True,
                  mode: str = 'seq'):
@@ -27,9 +28,12 @@ class OutputSuiteContext:
         path : str
             The S3 path to the output folder of an AMLB run
             Example: "s3://automl-benchmark-ag/ec2/2023_02_27_zs/"
-        contains : str, default = None
+        contains : Optional[str], default = None
             Can be specified to limit the returned outputs.
             For example, by specifying the constraint, such as ".1h8c."
+        allowed_tids : Optional[Set[int]], default = None
+            If specified, results will be filtered to only OutputContext objects
+            that have an OpenML TID within `allowed_tids`.
         columns_to_keep : List[str], default = None
             The list of columns to keep when loading from results files.
             If None, uses DEFAULT_COLUMNS_TO_KEEP
@@ -45,6 +49,11 @@ class OutputSuiteContext:
         """
         self._path = path
         self.contains = contains
+        self.allowed_tids = allowed_tids
+        if self.allowed_tids is not None:
+            assert isinstance(self.allowed_tids, set)
+            for tid in self.allowed_tids:
+                assert isinstance(tid, int)
         self.output_contexts = self.get_output_contexts(contains=self.contains)
         if len(self.output_contexts) == 0:
             print(f'WARNING: No output contexts found via path={self._path}, contains={self.contains}')
@@ -91,7 +100,11 @@ class OutputSuiteContext:
     def load_results(self) -> List[pd.DataFrame]:
         return self._loop_func(func=OutputContext.load_results,
                                input_list=self.output_contexts,
-                               kwargs=dict(include_infer_speed=self.include_infer_speed, keep_params=self.keep_params))
+                               kwargs=dict(
+                                   include_infer_speed=self.include_infer_speed,
+                                   keep_params=self.keep_params,
+                                   allowed_tids=self.allowed_tids,
+                               ))
 
     def load_zeroshot_metadata(self, max_size_mb: float = None, allow_exception=False) -> List[dict]:
         return self._loop_func(func=OutputContext.load_zeroshot_metadata,
@@ -117,8 +130,9 @@ class OutputSuiteContext:
             output_context for output_context, is_valid in zip(self.output_contexts, filter_lst) if is_valid is True
         ]
 
-    def aggregate_results(self) -> pd.DataFrame:
-        results_list = self.load_results()
+    def aggregate_results(self, results_list: Optional[List[pd.DataFrame]] = None) -> pd.DataFrame:
+        if results_list is None:
+            results_list = self.load_results()
         results_df = pd.concat(results_list, ignore_index=True)
         return results_df
 

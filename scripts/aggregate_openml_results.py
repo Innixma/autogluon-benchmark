@@ -16,7 +16,7 @@ if __name__ == '__main__':
                         nargs='?')
     parser.set_defaults(keep_params=True)
     parser.set_defaults(include_infer_speed=False)
-    parser.set_defaults(version_name="2023_02_27_zs")  # FIXME: Remove
+    parser.set_defaults(version_name="2023_03_19_zs")  # FIXME: Remove
     parser.set_defaults(constraint="24h64c")  # FIXME: Remove
     args = parser.parse_args()
 

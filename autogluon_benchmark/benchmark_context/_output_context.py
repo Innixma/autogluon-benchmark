@@ -1,3 +1,5 @@
+from typing import List, Optional, Set
+
 import boto3
 import numpy as np
 import pandas as pd
@@ -65,8 +67,19 @@ class OutputContext:
     def path_zeroshot_metadata(self):
         return self.path + 'zeroshot/zeroshot_metadata.pkl'
 
-    def load_results(self, include_infer_speed=False, keep_params=True) -> pd.DataFrame:
+    def load_results(self,
+                     include_infer_speed: bool = False,
+                     keep_params: bool = True,
+                     allowed_tids: Optional[Set[int]] = None,
+                     ) -> Optional[pd.DataFrame]:
+        """
+        allowed_tids can be specified to ensure results are only returned if they belong to a specific set of tasks.
+        """
         results = load_pd.load(self.path_results)
+        if allowed_tids is not None:
+            tid = self.get_tid(results_df=results)
+            if tid not in allowed_tids:
+                return None
         if not keep_params:
             results = results.drop(columns=['params'])
         if include_infer_speed:
@@ -98,6 +111,15 @@ class OutputContext:
         a = load_pkl.load(self.path_zeroshot_metadata)
         print(f'CUR Size: {size_og_mb} MB | {self.path}')
         return a
+
+    def get_tid(self, results_df: pd.DataFrame = None) -> int:
+        """
+        Get OpenML task ID (tid)
+        """
+        if results_df is None:
+            results_df = self.load_results()
+        tid = int(results_df['id'].iloc[0].rsplit('/', 1)[-1])
+        return tid
 
     def get_amlb_info(self, results_df: pd.DataFrame = None) -> str:
         if results_df is None:

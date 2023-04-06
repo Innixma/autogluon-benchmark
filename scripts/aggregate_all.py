@@ -1,3 +1,5 @@
+from typing import Optional, Set
+
 import argparse
 
 from autogluon.common.savers import save_pd, save_pkl
@@ -5,11 +7,14 @@ from autogluon.common.utils.s3_utils import s3_path_to_bucket_prefix
 
 from autogluon_benchmark import OutputSuiteContext
 from autogluon_benchmark.aggregate.zeroshot_metadata import load_zeroshot_metadata
+from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
 
 
 def aggregate_all(path_prefix,
                   version_name=None,
                   constraint=None,
+                  contains=None,
+                  allowed_tids: Optional[Set[int]] = None,
                   include_infer_speed=False,
                   aggregate_zeroshot=False,
                   aggregate_leaderboard=False,
@@ -23,19 +28,24 @@ def aggregate_all(path_prefix,
     constraint_str = f'_{constraint}' if constraint is not None else ''
     version_name_str = f'_{version_name}' if version_name is not None else ''
 
-    if constraint is not None:
+    if constraint is not None and contains is None:
         contains = f'.{constraint}.'
-    else:
-        contains = None
 
+    print(f'Initializing OutputSuiteContext from path="{path_prefix}"')
     output_suite_context = OutputSuiteContext(
         path=path_prefix,
         contains=contains,
+        allowed_tids=allowed_tids,
         include_infer_speed=include_infer_speed,
         keep_params=keep_params,
         mode=mode,
     )
-    results_df = output_suite_context.aggregate_results()
+    print(f'Fetching results from {output_suite_context.num_contexts} OutputContexts')
+    results_df_list = output_suite_context.load_results()
+    output_suite_context.filter(filter_lst=[result is not None for result in results_df_list])
+    print(f'Filtered to {output_suite_context.num_contexts} results '
+          f'(Filtered results may have TIDs missing from `allowed_tids`)')
+    results_df = output_suite_context.aggregate_results(results_list=results_df_list)
     output_suite_context.filter_failures()
     if aggregate_leaderboard:
         leaderboards_df = output_suite_context.aggregate_leaderboards()
@@ -91,19 +101,24 @@ if __name__ == '__main__':
                         nargs='?')
     parser.set_defaults(keep_params=False)
     parser.set_defaults(include_infer_speed=False)
-    parser.set_defaults(version_name="2023_02_27_zs")  # FIXME: Remove
+    parser.set_defaults(version_name="2023_03_19_zs")  # FIXME: Remove
     parser.set_defaults(constraint="24h64c")  # FIXME: Remove
     args = parser.parse_args()
 
     path_prefix = f's3://{args.s3_bucket}/{args.s3_prefix}{args.version_name}/'
 
+    task_metadata_289 = load_task_metadata(path='task_metadata_289.csv')
+    allowed_tids = set(list(task_metadata_289['tid']))
+
     aggregate_all(
         path_prefix=path_prefix,
         # version_name=args.version_name,
         # constraint=args.constraint,
+        allowed_tids=allowed_tids,
         include_infer_speed=args.include_infer_speed,
         keep_params=args.keep_params,
         aggregate_leaderboard=True,
         aggregate_zeroshot=True,
+        max_size_mb=10,
         mode=args.mode,
     )
