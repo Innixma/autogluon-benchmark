@@ -199,6 +199,12 @@ class BenchmarkEvaluator:
         task_metadata[DATASET] = task_metadata['name']
         # FIXME: TEMP
         results_raw = results_raw.drop(columns=[DATASET])
+        results_raw_nan = results_raw[results_raw['tid'].isna()]
+        if len(results_raw_nan) > 0:
+            unique_frameworks = list(results_raw_nan[FRAMEWORK].unique())
+            raise ValueError(f'clean_data=True, but the following frameworks have a NaN  in the required `tid` column: {unique_frameworks}\n'
+                             f'\tYou may need to regenerate the preprocessed result files, or else set `clean_data=False`. '
+                             f'AutoMLBenchmark results on OpenML tasks should always have a valid `tid`.')
         results_raw['tid'] = results_raw['tid'].astype(int)
         pre_unique_tid = len(results_raw['tid'].unique())
         # results_raw['dataset'] = results_raw['dataset'].map({'numerai28_6': 'numerai28.6'}).fillna(results_raw['dataset'])

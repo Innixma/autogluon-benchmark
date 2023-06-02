@@ -16,6 +16,7 @@ def run(
     treat_folds_as_datasets=False,
     banned_datasets=None,
     infer_batch_size=None,
+    clean_data=True,
     use_tid_as_dataset_name=True,
     filter_errors=False,  # If True, all dataset errors will be filtered out
 ):
@@ -38,6 +39,7 @@ def run(
     results_raw = benchmark_evaluator.load_data(paths=paths,
                                                 frameworks=frameworks_run,
                                                 folds=folds_to_keep,
+                                                clean_data=clean_data,
                                                 problem_type=problem_type,
                                                 banned_datasets=banned_datasets,
                                                 infer_batch_size=infer_batch_size,
