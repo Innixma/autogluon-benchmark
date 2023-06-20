@@ -1,7 +1,6 @@
 import copy
 from typing import List, Optional, Set
 
-import numpy as np
 import pandas as pd
 import ray
 

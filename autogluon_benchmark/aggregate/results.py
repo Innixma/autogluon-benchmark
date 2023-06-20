@@ -9,7 +9,7 @@ def aggregate_results(s3_bucket,
                       constraint,
                       include_infer_speed=False,
                       mode='ray'):
-    contains = f'.{constraint}.'
+    contains = f'.{constraint}.' if constraint else None
     result_path = f'{s3_prefix}{version_name}/'
     path_prefix = f's3://{s3_bucket}/{result_path}'
 

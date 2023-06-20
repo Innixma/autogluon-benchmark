@@ -1,3 +1,5 @@
+import argparse
+
 from autogluon_benchmark.evaluation import evaluate_results
 from autogluon_benchmark.evaluation.constants import TIME_INFER_S
 from autogluon_benchmark.evaluation.evaluate_utils import compute_stderr_z_stat, compute_stderr_z_stat_bulk, compute_win_rate_per_dataset, graph_vs
@@ -66,217 +68,28 @@ def run(
 
 
 if __name__ == '__main__':
-    frameworks_run = [
-        # 'AutoGluon_bq_1h8c_2022_03_25',  # v0.4.0
-        # 'AutoGluon_bq_1h8c_2022_05_09_rf',  # v0.4.1
-        # 'AutoGluon_hq_1h8c_2022_03_25',  # v0.4.0
-        # 'AutoGluon_bestquality_1h_2021_02_06_v0_1_0',  # v0.1.0
-        # 'AutoGluon_bestquality_1h_2021_09_02',  # v0.3.1
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--paths', type=str, help="Results Paths", required=True, nargs='+')
+    parser.add_argument('--frameworks_run', type=str, help="Name of framework runs", required=True, nargs='+')
+    parser.add_argument('--problem_types', type=str, help="Problem types to evaluate", choices=['binary', 'multiclass', 'regression'], default=['binary', 'multiclass', 'regression'], nargs="+")
+    parser.add_argument('--folds_to_keep', type=int, help="Folds to keep for evaluation", nargs="*")
+    parser.add_argument('--filter_errors', type=bool, help="Filter errors during evaluation", default=False)
+    parser.add_argument('--banned_datasets', type=str, help="Datasets to skip", default=['car', 'kr-vs-kp', 'OnlineNewsPopularity'], nargs='+')
 
-        # 'H2OAutoML_1h8c_2022_03_25',
-        # 'flaml_4h8c_gp3_2022_jmlr',
+    args = parser.parse_args()
 
-        # 'AutoGluon_bq_1h8c_2022_11_14_v06_is',
-        # 'AutoGluon_hq_1h8c_2022_11_14_v06_is',
-        # 'AutoGluon_gq_1h8c_2022_11_14_v06_is',
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_is',
-
-        'AutoGluon_bq_1h8c_2022_11_14_v06_is',
-        'AutoGluon_bq_1h8c_2023_02_14_v07_infer_speed',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_infer_speed',
-
-        # 'AutoGluon_mq_1h8c_2023_02_20_bool',
-        # 'AutoGluon_mq_1h8c_2023_02_20_bool_LightGBM',
-        # 'AutoGluon_mq_1h8c_2023_02_20_bool_test_LightGBM',
-        # 'AutoGluon_mq_1h8c_2023_02_20_bool_test_CatBoost',
-        # 'AutoGluon_bq_1h8c_2023_02_14_v07_sk102_infer_speed',
-
-        # 'AutoGluon_hq_il001_1h8c_2022_11_14_v06_is',
-        # 'AutoGluon_hq_il0005_1h8c_2022_11_14_v06_is',
-
-        # 'AutoGluon_bq_1h8c_2023_02_12_v07_infer_speed',
-        # 'AutoGluon_hq_1h8c_2023_02_12_v07_infer_speed',
-        # 'AutoGluon_gq_1h8c_2023_02_12_v07_infer_speed',
-        # 'AutoGluon_mq_1h8c_2023_02_12_v07_infer_speed',
-
-        # 'AutoGluon_mq_1h8c_2023_02_13_v07_infer_speed',
-        # 'AutoGluon_bq_1h8c_2023_02_14_v07_infer_speed',
-        # 'AutoGluon_hq_1h8c_2023_02_14_v07_infer_speed',
-        # 'AutoGluon_gq_1h8c_2023_02_14_v07_infer_speed',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_infer_speed',
-
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_RandomForestEntr',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_RandomForestEntr',
-
-        # 'AutoGluon_bq_1h8c_2022_11_14_v06_RandomForestEntr_BAG_L1',
-        # 'AutoGluon_bq_1h8c_2023_02_14_v07_RandomForestEntr_BAG_L1',
-
-        # 'AutoGluon_bq_1h8c_2022_11_14_v06_RandomForestGini_BAG_L1',
-        # 'AutoGluon_bq_1h8c_2023_02_14_v07_RandomForestGini_BAG_L1',
-
-        # 'AutoGluon_bq_1h8c_2022_11_14_v06_ExtraTreesEntr_BAG_L1',
-        # 'AutoGluon_bq_1h8c_2023_02_14_v07_ExtraTreesEntr_BAG_L1',
-
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_KNeighborsUnif',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_KNeighborsUnif',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_sk102_KNeighborsUnif',
-
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_ExtraTreesEntr',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_ExtraTreesEntr',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_sk102_ExtraTreesEntr',
-
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_RandomForestEntr',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_RandomForestEntr',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_sk102_RandomForestEntr',
-        #
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_CatBoost',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_CatBoost',
-        # 'AutoGluon_mq_1h8c_2023_02_20_bool_CatBoost',
-        #
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_XGBoost',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_XGBoost',
-        #
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_LightGBM',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_LightGBM',
-        # 'AutoGluon_mq_1h8c_2023_02_20_bool_LightGBM',
-        #
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_NeuralNetTorch',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_NeuralNetTorch',
-        #
-        # 'AutoGluon_mq_1h8c_2022_11_14_v06_NeuralNetFastAI',
-        # 'AutoGluon_mq_1h8c_2023_02_14_v07_NeuralNetFastAI',
-
-        # 'AutoGluon_bq_1h8c_2022_11_14_v06_NeuralNetFastAI_BAG_L1',
-        # 'AutoGluon_bq_1h8c_2023_02_14_v07_NeuralNetFastAI_BAG_L1',
-
-        # 'AutoGluon_bq_1h8c_2023_01_08_v062',
-        # 'AutoGluon_bq_1h8c_2022_12_08_v061',
-        # 'AutoGluon_bestquality_1h8c_2022_05_09',
-        # 'AutoGluon_hq_1h8c_2023_01_08_v062',
-        # 'AutoGluon_gq_1h8c_2023_01_08_v062',
-        # 'AutoGluon_mq_1h8c_2023_01_08_v062',
-        # 'AutoGluon_hq_1h8c_2022_12_08_v061',
-        # 'AutoGluon_gq_1h8c_2022_12_08_v061',
-        # 'AutoGluon_mq_1h8c_2022_12_08_v061',
-
-        # 'EnsembleTrueCV',
-        # 'EnsembleAllHPO',
-        # 'EnsembleAGSimple',
-        # 'AutoGluon_bq_4h64c_2022_11_14_v06_ftt',
-        # 'AutoGluon_hq_4h64c_2022_11_14_v06_ftt',
-        # 'AutoGluon_ebq_4h64c_2022_11_14_v06_ftt',
-        # 'AutoGluon_ehq_4h64c_2022_11_14_v06_ftt',
-        # 'AutoGluon_euq_4h64c_2022_11_14_v06_ftt',
-
-        # 'Ensemble_AG_FTT_all_bq_mytest24h_2022_09_14_v3',
-        # 'Ensemble_AG_FTT_all_bq_cpu_mytest24h_2022_09_14_v3',
-        # 'Ensemble_AG_bq_mytest24h_2022_09_14',
-        # 'Ensemble_AG_FTT_all_bq_mytest4h_2022_09_14_v2',
-        # 'Ensemble_AG_bq_mytest4h_2022_09_14_v2',
-        # 'AutoGluon_bq_1h8c_2022_06_26_binary',
-        # 'AutoGluon_hq_1h8c_2022_06_26_binary',
-        # 'AutoGluon_gq_1h8c_2022_06_26_binary',
-        # 'AutoGluon_mq_1h8c_2022_06_26_binary',
-
-        # 'AutoGluon_benchmark_1h8c_gp3_2022_jmlr',
-        # 'autosklearn_4h8c_gp3_2022_jmlr',
-        # 'autosklearn2_1h8c_gp3_2022_jmlr',
-        # 'flaml_1h8c_gp3_2022_jmlr',
-        # 'GAMA_benchmark_1h8c_gp3_2022_jmlr',
-        # 'H2OAutoML_1h8c_gp3_2022_jmlr',
-    ]
-
-    paths = [
-        'openml_ag_2021_02_06_v0_1_0.csv',  # 10-fold ag 1h
-        'openml_ag_2021_09_02.csv',  # 0.3.1
-        'openml_ag_2022_03_25.csv',  # 1h8c + 4h8c mq gq hq bq AG 0.4 PyPi + other frameworks
-        'openml_ag_2022_05_09.csv',  # 1h8c + 4h8c mq bq 0.4.1
-        'openml_ag_2022_06_26_binary.csv',  # 1h8c bq hq gq mq with binary no stack
-        'openml_ag_2022_06_26_binary_models.csv',  # 1h8c bq hq gq mq with binary no stack
-        'amlb/2022_jmlr.csv',  # gjibers et al
-
-        'openml_ag_2022_09_14.csv',  # Bingzhao
-        'openml_ag_2022_09_14_v2.csv',
-        'openml_ag_2022_09_14_v3.csv',
-
-        'openml_ag_2022_11_14_v06_ftt.csv',  # 4h64c ebq, ehq, eup, bq, hq, 1fold
-        'openml_ag_2022_11_14_v06.csv',  # 1h8c bq, hq, gq, mq, hqi001 hqi0005 hqi0002
-        'openml_ag_2022_11_14_v06_is.csv',
-
-        'zeroshot/zeroshot_EnsembleTrueCV.csv',
-        'zeroshot/zeroshot_EnsembleAllHPO.csv',
-        'zeroshot/zeroshot_EnsembleAGSimple.csv',
-        'openml_ag_2022_10_13_zs_models.csv',
-
-        'openml_ag_2022_12_08_v061.csv',
-        'openml_ag_2023_01_08_v062.csv',
-
-        'openml_ag_2023_02_12_v07_infer_speed.csv',
-        'openml_ag_2023_02_13_v07_infer_speed.csv',  # Accelerated FastAI Preprocessing
-        'openml_ag_2023_02_14_v07_infer_speed.csv',  # Fixed TorchNN time_limit
-
-        'openml_ag_2023_02_14_v07_models.csv',
-        'openml_ag_2022_11_14_v06_models.csv',
-
-        'openml_ag_2023_02_14_v07_sk102_infer_speed.csv',
-        'openml_ag_2023_02_14_v07_sk102_models.csv',
-
-        'openml_ag_2023_02_20_bool.csv',
-        'openml_ag_2023_02_20_bool_models.csv',
-
-        'openml_ag_2023_02_20_bool_test_models.csv',
-
-    ]
-
-    use_tid_as_dataset_name = False
-    # problem_types = ['multiclass']
-    # problem_types = ['binary', 'regression']
-    problem_types = ['binary', 'multiclass', 'regression']
-    treat_folds_as_datasets = False
-    folds_to_keep = [0]
-    # infer_batch_size = 1
-    filter_errors = True
-    infer_batch_size = None
-    banned_datasets = [
-        'car',
-        'kr-vs-kp',
-        'OnlineNewsPopularity',
-    ]
-    # problem_types = ['multiclass']
-    # for problem_type in problem_types:
-    #     run(
-    #         output_suffix=f'2022_amlb_jmlr/1h8c/{problem_type}',
-    #         problem_type=problem_type,
-    #     )
-    #     run(
-    #         output_suffix=f'2022_amlb_jmlr/1h8c_fillna/{problem_type}',
-    #         problem_type=problem_type,
-    #         framework_nan_fill='constantpredictor_1h8c_gp3_2022_jmlr',
-    #     )
     run(
-        paths=paths,
-        frameworks_run=frameworks_run,
-        output_suffix=f'2022_amlb_jmlr/1h8c/all',
-        problem_type=problem_types,
-        treat_folds_as_datasets=treat_folds_as_datasets,
-        # folds_to_keep=folds_to_keep,
-        infer_batch_size=infer_batch_size,
-        filter_errors=filter_errors,
-        use_tid_as_dataset_name=use_tid_as_dataset_name,
-        banned_datasets=banned_datasets,
-        # folds_to_keep=folds_to_keep,
-    )
-    run(
-        paths=paths,
-        frameworks_run=frameworks_run,
-        output_suffix=f'2022_amlb_jmlr/1h8c_fillna/all',
-        framework_nan_fill='constantpredictor_1h8c_gp3_2022_jmlr',
-        problem_type=problem_types,
-        treat_folds_as_datasets=treat_folds_as_datasets,
-        infer_batch_size=infer_batch_size,
-        filter_errors=filter_errors,
-        use_tid_as_dataset_name=use_tid_as_dataset_name,
-        banned_datasets=banned_datasets,
-        # folds_to_keep=folds_to_keep,
+        paths=args.paths,
+        frameworks_run=args.frameworks_run,
+        output_suffix=f'autogluon-bench-text',
+        framework_nan_fill='constantpredictor',
+        problem_type=args.problem_types,
+        treat_folds_as_datasets=False,
+        infer_batch_size=None,
+        filter_errors=args.filter_errors,
+        use_tid_as_dataset_name=False,
+        banned_datasets=args.banned_datasets,
+        folds_to_keep=args.folds_to_keep,
         compute_z_score=False,
     )
+
