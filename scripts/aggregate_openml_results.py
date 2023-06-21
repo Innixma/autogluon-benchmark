@@ -9,15 +9,9 @@ if __name__ == '__main__':
                         default='automl-benchmark-ag', nargs='?')
     parser.add_argument('--s3_prefix', type=str, help='Prefix for path to results needing aggregation', default='ec2/', nargs='?')
     parser.add_argument('--version_name', type=str, help='Root folder name in EC2 of results', nargs='?')
-    parser.add_argument('--constraint', type=str, help='Name of constraint used in benchmark', default='1h8c', nargs='?')
+    parser.add_argument('--constraint', type=str, help='Name of constraint used in benchmark', default=None, nargs='?')
     parser.add_argument('--include_infer_speed', action='store_true')
-    parser.add_argument('--no-include_infer_speed', dest='include_infer_speed', action='store_false')
-    parser.add_argument('--mode', type=str, help='Whether to aggregate via "seq" or via "ray"', default='ray',
-                        nargs='?')
-    parser.set_defaults(keep_params=True)
-    parser.set_defaults(include_infer_speed=False)
-    parser.set_defaults(version_name="2023_03_19_zs")  # FIXME: Remove
-    parser.set_defaults(constraint="24h64c")  # FIXME: Remove
+    parser.add_argument('--mode', type=str, help='Whether to aggregate via "seq" or via "ray"', default='ray', nargs='?')
     args = parser.parse_args()
 
     aggregate_results(
