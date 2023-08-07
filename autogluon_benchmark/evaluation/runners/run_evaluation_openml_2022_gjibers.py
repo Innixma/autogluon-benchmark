@@ -1,4 +1,4 @@
-from autogluon_benchmark.evaluation.runners.run_evaluation_openml import run
+from autogluon.bench.eval.scripts.run_evaluation_openml import evaluate
 
 
 if __name__ == '__main__':
@@ -28,17 +28,17 @@ if __name__ == '__main__':
     treat_folds_as_datasets = False
     # filter_errors = True
     infer_batch_size = None
-    run(
+    evaluate(
         paths=paths,
         frameworks_run=frameworks_run,
         output_suffix=f'2022_amlb_jmlr/1h8c/all',
         problem_type=problem_types,
         treat_folds_as_datasets=treat_folds_as_datasets,
         infer_batch_size=infer_batch_size,
-        filter_errors=True,
+        filter_errors=False,
         use_tid_as_dataset_name=use_tid_as_dataset_name,
     )
-    run(
+    evaluate(
         paths=paths,
         frameworks_run=frameworks_run,
         output_suffix=f'2022_amlb_jmlr/1h8c_fillna/all',
