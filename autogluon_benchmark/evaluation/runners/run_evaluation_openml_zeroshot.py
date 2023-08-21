@@ -7,9 +7,9 @@ import pandas as pd
 
 from autogluon.common.savers import save_pd
 
-from autogluon_benchmark.evaluation import evaluate_results
-from autogluon_benchmark.evaluation.constants import TIME_INFER_S
-from autogluon_benchmark.evaluation import BenchmarkEvaluator
+from autogluon.bench.eval.evaluation import evaluate_results
+from autogluon.bench.eval.evaluation.constants import TIME_INFER_S
+from autogluon.bench.eval.evaluation.benchmark_evaluator import BenchmarkEvaluator
 
 
 def run(
@@ -55,21 +55,9 @@ def run(
         treat_folds_as_datasets=treat_folds_as_datasets,
     )
 
-    # results_raw = results_raw[results_raw['tid'].isin(valid_tids)]
-
     if frameworks_rename_dict:
         results_raw['framework'] = results_raw['framework'].map(frameworks_rename_dict).fillna(results_raw['framework'])
         frameworks_run = [frameworks_rename_dict.get(f, f) for f in frameworks_run]
-
-    folds_to_keep = sorted(results_raw['fold'].unique())
-    from autogluon_benchmark.evaluation.evaluate_utils import compute_stderr_z_stat, compute_stderr_z_stat_bulk, \
-        compute_win_rate_per_dataset, graph_vs
-    if len(folds_to_keep) > 1:
-        compute_win_rate_per_dataset(f1=frameworks_run[0], f2=frameworks_run[1], results_raw=results_raw, folds=folds_to_keep)
-    if compute_z_score and len(folds_to_keep) > 1:
-        z_stat_df = compute_stderr_z_stat_bulk(framework=frameworks_run[0], frameworks_to_compare=frameworks_run[1:], results_raw=results_raw)
-        z_stat_series = compute_stderr_z_stat(results_raw, f1=frameworks_run[0], f2=frameworks_run[1], folds=folds_to_keep, verbose=False)
-        graph_vs(results_df=results_raw, f1=frameworks_run[0], f2=frameworks_run[1], z_stats=z_stat_series)
 
     if output_path is not None:
         results_dir = output_path
@@ -86,42 +74,42 @@ def run(
 
 
 if __name__ == '__main__':
+    s3_input_dir = 's3://automl-benchmark-ag/aggregated/ec2'
+
+    path_input_suffix = "2023_07_25"
+    path_input = f"{s3_input_dir}/{path_input_suffix}"
+
+    path_output_suffix = "2023_07_28"
+    path_output = f"{s3_input_dir}/{path_output_suffix}"
+
     ts = time.time()
     problem_types = ['binary', 'multiclass', 'regression']
 
     treat_folds_as_datasets = True
     folds_to_keep = [0]
 
-    s3_input_dir = 's3://automl-benchmark-ag/aggregated/ec2'
-    paths = [
-        # f'{s3_input_dir}/2023_07_25/leaderboard_preprocessed.csv',
-        f'{s3_input_dir}/2023_07_25/results_preprocessed.csv',
+    results_dir = 'data/results/'
+
+    benchmark_evaluator = BenchmarkEvaluator(results_dir=results_dir)
+
+    paths_baselines = [
+        f'{path_input}/results_preprocessed.csv',
     ]
 
-    paths2 = [
-        f'{s3_input_dir}/2023_07_25/leaderboard_preprocessed.csv',
+    paths_configs = [
+        f'{path_input}/leaderboard_preprocessed.csv',
     ]
-    results_raw_baselines = pd.concat([pd.read_csv(path) for path in paths], ignore_index=True, sort=True)
-    results_raw_configs = pd.concat([pd.read_csv(path) for path in paths2], ignore_index=True, sort=True)
 
-    # results_raw = results_raw[results_raw['framework'].str.contains('_60h8c_')]
-    # results_raw = results_raw[results_raw['framework'].str.contains('AutoGluon')]
+    results_raw_baselines = benchmark_evaluator.load_results_raw(paths=paths_baselines)
+    results_raw_configs = benchmark_evaluator.load_results_raw(paths=paths_configs)
+
     results_raw_baselines = results_raw_baselines[~results_raw_baselines['framework'].str.contains('ZS_BAG_')]
-    # results_raw = results_raw[results_raw['framework'].str.contains('_1h8c_')]
+    # results_raw_baselines = results_raw_baselines[results_raw_baselines['framework'].str.contains('_1h8c_')]
     results_raw_configs = results_raw_configs[results_raw_configs['framework'].str.contains('ZS_BAG_')]
     results_raw_configs = results_raw_configs.drop_duplicates(subset=['framework', 'dataset', 'fold'])
 
-    path_leaderboard_preprocessed_configs = f'{s3_input_dir}/2023_07_25/leaderboard_preprocessed_configs.csv'
+    path_leaderboard_preprocessed_configs = f'{path_output}/leaderboard_preprocessed_configs.csv'
     save_pd.save(path=path_leaderboard_preprocessed_configs, df=results_raw_configs)
-
-    raise AssertionError()
-
-    # results_raw2 = results_raw2[results_raw2['framework'].str.contains('_c1')]
-
-    # paths = [
-    #     f'{s3_input_dir}/2023_07_25/leaderboard_preprocessed.csv',
-    #     f'{s3_input_dir}/2023_07_25/results_preprocessed.csv',
-    # ]
 
     banned_frameworks = [
         "constantpredictor_1h8c_2023_07_25",
@@ -142,7 +130,7 @@ if __name__ == '__main__':
     run(
         frameworks_run=frameworks_run_baselines,
         paths=results_raw_baselines,
-        output_path='s3://automl-benchmark-ag/aggregated/ec2/2023_07_25/evaluation/compare/',
+        output_path=f'{path_output}/evaluation/compare/',
         folds_to_keep=folds_to_keep,
         treat_folds_as_datasets=treat_folds_as_datasets,
     )
@@ -182,13 +170,12 @@ if __name__ == '__main__':
     if dense_datasets is not None:
         results_raw = results_raw[results_raw['dataset'].isin(dense_datasets)]
 
-    path_leaderboard_pruned = f'{s3_input_dir}/2023_07_25/leaderboard_pruned.csv'
+    path_leaderboard_pruned = f'{path_output}/leaderboard_pruned.csv'
     from autogluon.common.savers import save_pd
     save_pd.save(path=path_leaderboard_pruned, df=results_raw)
 
     frameworks_run = list(results_raw['framework'].unique())
     frameworks_run_zeroshot = [zs_name for zs_name in frameworks_run if 'ZS_BAG_' in zs_name]
-    # frameworks_run_zeroshot = frameworks_run_zeroshot[:400]
 
     # FIXME: TEMP
     constraint = '60h8c'
@@ -210,11 +197,11 @@ if __name__ == '__main__':
     ]
 
     run(
-        paths=results_raw_baselines,
+        paths=results_raw_configs,
         frameworks_run=frameworks_run_zeroshot,
         frameworks_rename_dict=frameworks_run_zeroshot_rename,
         # frameworks_compare_vs_all=frameworks_compare_vs_all,
-        output_path='s3://automl-benchmark-ag/aggregated/ec2/2023_07_25/evaluation/configs/',
+        output_path=f'{path_output}/evaluation/configs/',
         folds_to_keep=folds_to_keep,
         treat_folds_as_datasets=treat_folds_as_datasets,
     )
