@@ -5,28 +5,37 @@ import argparse
 from autogluon.common.savers import save_pd, save_pkl
 from autogluon.common.utils.s3_utils import s3_path_to_bucket_prefix
 
-from autogluon_benchmark import OutputSuiteContext
+from autogluon.bench.eval.benchmark_context.output_suite_context import OutputSuiteContext
+from autogluon.bench.eval.evaluation.metadata.metadata_loader import load_task_metadata
+from autogluon.bench.eval.scripts.run_generate_clean_openml import clean_and_save_results
+
 from autogluon_benchmark.aggregate.zeroshot_metadata import load_zeroshot_metadata
-from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
 
 
 def aggregate_all(path_prefix,
                   version_name=None,
+                  use_version_name_str=False,
                   constraint=None,
                   contains=None,
                   allowed_tids: Optional[Set[int]] = None,
                   include_infer_speed=False,
                   aggregate_zeroshot=False,
                   aggregate_leaderboard=False,
+                  aggregate_model_failures=False,
+                  output_path=None,
                   keep_params=False,
                   invalid_datasets=None,
                   folds=None,
                   max_size_mb=100,
                   mode='ray'):
     s3_bucket, s3_prefix = s3_path_to_bucket_prefix(s3_path=path_prefix)
-    output_path = f's3://{s3_bucket}/aggregated/{s3_prefix}'
+    if output_path is None:
+        output_path = f's3://{s3_bucket}/aggregated/{s3_prefix}'
     constraint_str = f'_{constraint}' if constraint is not None else ''
-    version_name_str = f'_{version_name}' if version_name is not None else ''
+    if use_version_name_str:
+        version_name_str = f'_{version_name}' if version_name is not None else ''
+    else:
+        version_name_str = ''
 
     if constraint is not None and contains is None:
         contains = f'.{constraint}.'
@@ -42,11 +51,35 @@ def aggregate_all(path_prefix,
     )
     print(f'Fetching results from {output_suite_context.num_contexts} OutputContexts')
     results_df_list = output_suite_context.load_results()
+    len_results = len(results_df_list)
+    if folds is not None:
+        for i in range(len_results):
+            result = results_df_list[i]
+            if result is not None:
+                if result.iloc[0]['fold'] not in folds:
+                    results_df_list[i] = None
+
     output_suite_context.filter(filter_lst=[result is not None for result in results_df_list])
     print(f'Filtered to {output_suite_context.num_contexts} results '
           f'(Filtered results may have TIDs missing from `allowed_tids`)')
+
+    if aggregate_model_failures:
+        model_failures_df = output_suite_context.aggregate_model_failures()
+        if model_failures_df is not None:
+            aggregated_model_failures_name = f'model_failures{constraint_str}{version_name_str}.csv'
+            aggregated_model_failures_path = f'{output_path}{aggregated_model_failures_name}'
+            print(f'Saving output to "{aggregated_model_failures_path}"')
+            save_pd.save(path=aggregated_model_failures_path, df=model_failures_df)
+            print(f'Success! Saved output to "{aggregated_model_failures_path}"')
+
     results_df = output_suite_context.aggregate_results(results_list=results_df_list)
     output_suite_context.filter_failures()
+
+    # Get the results df for only valid (successful) jobs
+    results_valid_df = output_suite_context.aggregate_results()  # TODO: Can speedup by computing from `results_df`
+
+    # FIXME: Drop duplicates before aggregating leaderboard / zeroshot
+
     if aggregate_leaderboard:
         leaderboards_df = output_suite_context.aggregate_leaderboards()
     else:
@@ -65,7 +98,22 @@ def aggregate_all(path_prefix,
 
     aggregated_results_name = f'results{constraint_str}{version_name_str}.csv'
     aggregated_results_path = f'{output_path}{aggregated_results_name}'
+    aggregated_results_valid_name = f'results_valid{constraint_str}{version_name_str}.csv'
+    aggregated_results_valid_path = f'{output_path}{aggregated_results_valid_name}'
     save_pd.save(path=aggregated_results_path, df=results_df)
+    save_pd.save(path=aggregated_results_valid_path, df=results_valid_df)
+
+    clean_and_save_results(
+        run_name=version_name,
+        out_path_prefix='results_preprocessed',
+        file_prefix=aggregated_results_name[:-4],
+        results_dir_input=output_path,
+        results_dir_output=output_path,
+        constraints=None,
+        run_name_in_input_path=False,
+        run_name_in_output_path=False,
+    )
+
     print(f'Saved to {aggregated_results_path}!')
     if aggregate_leaderboard:
         aggregated_leaderboard_name = f'leaderboard{constraint_str}{version_name_str}.csv'
@@ -73,6 +121,17 @@ def aggregate_all(path_prefix,
         print(f'Saving output to "{aggregated_leaderboard_path}"')
         save_pd.save(path=aggregated_leaderboard_path, df=leaderboards_df)
         print(f'Success! Saved output to "{aggregated_leaderboard_path}"')
+
+        clean_and_save_results(
+            run_name=version_name,
+            out_path_prefix='leaderboard_preprocessed',
+            file_prefix=aggregated_leaderboard_name[:-4],
+            results_dir_input=output_path,
+            results_dir_output=output_path,
+            constraints=None,
+            run_name_in_input_path=False,
+            run_name_in_output_path=False,
+        )
 
     if aggregate_zeroshot:
         max_mb_str = f'_{int(max_size_mb)}_mb' if max_size_mb is not None else ''
@@ -84,7 +143,7 @@ def aggregate_all(path_prefix,
 
         save_pkl.save(path=aggregated_pred_proba_path, object=aggregated_pred_proba)
         save_pkl.save(path=aggregated_ground_truth_path, object=aggregated_ground_truth)
-
+        print(f'Success! Saved pred_proba and ground_truth output.')
     pass
 
 
@@ -105,20 +164,33 @@ if __name__ == '__main__':
     parser.set_defaults(constraint="24h64c")  # FIXME: Remove
     args = parser.parse_args()
 
-    path_prefix = f's3://{args.s3_bucket}/{args.s3_prefix}{args.version_name}/'
+    version_name = args.version_name
+    include_infer_speed = False
+    keep_params = False
 
+    VERSION_NAME_HACK = "2023_07_25"
+    VERSION_NAME_HACK = "2023_08_21"
+    version_name = VERSION_NAME_HACK
+
+    path_prefix = f's3://{args.s3_bucket}/{args.s3_prefix}{version_name}/'
+
+    # task_metadata_244 = load_task_metadata(path='task_metadata_244.csv')
     task_metadata_289 = load_task_metadata(path='task_metadata_289.csv')
     allowed_tids = set(list(task_metadata_289['tid']))
 
+    output_path = f's3://{args.s3_bucket}/aggregated/ec2/{version_name}/'
+
     aggregate_all(
         path_prefix=path_prefix,
-        # version_name=args.version_name,
+        version_name=version_name,
         # constraint=args.constraint,
         allowed_tids=allowed_tids,
-        include_infer_speed=args.include_infer_speed,
-        keep_params=args.keep_params,
+        include_infer_speed=include_infer_speed,
+        keep_params=keep_params,
+        output_path=output_path,
         aggregate_leaderboard=True,
         aggregate_zeroshot=True,
+        aggregate_model_failures=True,
         max_size_mb=10,
         mode=args.mode,
     )
