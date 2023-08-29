@@ -1,5 +1,11 @@
 Code for benchmarking AutoGluon.
 
+## Development Installation
+
+First git clone autogluon and autogluon.bench repos and do a local install, then git clone this repo and do a local install.
+
+TODO: List commands
+
 ## Full AutoMLBenchmark
 
 To run AutoMLBenchmark, see instructions in:

@@ -4,9 +4,10 @@ requirements = [
     'boto3',
     'numpy',
     'pandas',
-    'openml',
+    'openml>=0.14.1',
     's3fs',
     'autogluon',
+    'autogluon.bench',
     'pyyaml',
 ]
 
