@@ -1,6 +1,10 @@
+import copy
 from typing import Optional, Set
 
 import argparse
+
+import pandas as pd
+from tqdm import tqdm
 
 from autogluon.common.savers import save_pd, save_pkl
 from autogluon.common.utils.s3_utils import s3_path_to_bucket_prefix
@@ -10,6 +14,47 @@ from autogluon.bench.eval.evaluation.metadata.metadata_loader import load_task_m
 from autogluon.bench.eval.scripts.run_generate_clean_openml import clean_and_save_results
 
 from autogluon_benchmark.aggregate.zeroshot_metadata import load_zeroshot_metadata
+
+
+def get_dataset_size_mb(
+        leaderboards_df: pd.DataFrame,
+        results_valid_df: pd.DataFrame,
+        output_suite_context: OutputSuiteContext) -> pd.DataFrame:
+    """
+    Returns the size in megabytes of all zeroshot metadata artifacts for a given dataset (across all folds)
+
+    Parameters
+    ----------
+    leaderboards_df
+    results_valid_df
+    output_suite_context
+
+    Returns
+    -------
+    A pandas DataFrame with two columns: ["dataset", "size_mb"], sorted by descending "size_mb".
+
+    """
+    leaderboards_df_tmp = copy.deepcopy(leaderboards_df)
+    unique_tasks_dict = leaderboards_df_tmp[['task', 'fold']].drop_duplicates().groupby('task')['fold'].apply(set).to_dict()
+
+    dataset_size_mb_dict = {}
+    for task, task_folds in tqdm(unique_tasks_dict.items()):
+        total_size = 0
+        for fold in task_folds:
+            result_task_fold_indices = (results_valid_df["task"] == task) & (results_valid_df["fold"] == fold)
+            output_suite_context_task_fold = output_suite_context.filter(filter_lst=list(result_task_fold_indices), inplace=False)
+            zeroshot_metadata_size_bytes = output_suite_context_task_fold.get_zeroshot_metadata_size_bytes(allow_exception=True)
+            for b in zeroshot_metadata_size_bytes:
+                if b is not None:
+                    total_size += b
+        total_size_mb = total_size / 1e6
+        dataset_size_mb_dict[task] = total_size_mb
+
+    sorted_tuple_list = sorted(dataset_size_mb_dict.items(), key=lambda x: x[1], reverse=True)
+    for d, mb in sorted_tuple_list:
+        print(f"{mb:.3f} MB\t{d}")
+    dataset_size_mb_df = pd.DataFrame(sorted_tuple_list, columns=["dataset", "size_mb"])
+    return dataset_size_mb_df
 
 
 def aggregate_all(path_prefix,

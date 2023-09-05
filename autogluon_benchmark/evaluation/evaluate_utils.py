@@ -485,3 +485,4 @@ def compute_win_rate_per_dataset(
     print(f'winrate {f1} vs {f2}')
     with pd.option_context('display.max_columns', None, 'display.width', 1000):
         print(out_df)
+    return out_df
