@@ -1,3 +1,5 @@
+import copy
+
 import pandas as pd
 
 from autogluon.common.savers import save_pd
@@ -77,6 +79,7 @@ def evaluate(results_raw, frameworks=None, banned_datasets=None, folds_to_keep=N
     print('num_folds:', num_folds)
     print('errors:', errors)
 
+    print('################################################')
     for framework in total_frameworks:
         results_framework = results_raw[results_raw[FRAMEWORK] == framework]
         num_rows_framework = len(results_framework)
@@ -84,26 +87,57 @@ def evaluate(results_raw, frameworks=None, banned_datasets=None, folds_to_keep=N
         datasets_framework_errors = [dataset for dataset in total_datasets if dataset not in datasets_framework]
         datasets_framework_errors_count = len(datasets_framework_errors)
         framework_fold_errors = num_datasets * num_folds - num_rows_framework
-        print('################################################')
         print('framework:', framework)
-        print('\tdatasets_framework_errors:', datasets_framework_errors)
-        print('\tdatasets_framework_errors_count:', datasets_framework_errors_count)
-        print('\tframework_fold_errors:', framework_fold_errors)
+        print(f'\tdatasets_errors: {datasets_framework_errors_count}\tfold_errors: {framework_fold_errors}\tdatasets_framework_errors: {datasets_framework_errors}')
+    print('################################################')
+    print('%s VS %s' % ('all', 'all'))
+    print('\tAll datasets regardless of failures')
+    results_ranked_all, results_ranked_by_dataset_all = evaluate_utils.compare_frameworks(results_raw=results_raw, banned_datasets=banned_datasets, folds_to_keep=folds_to_keep, filter_errors=False, columns_to_agg_extra=columns_to_agg_extra, datasets=total_datasets)
+
+    if output_dir:
+        save_pd.save(path=output_dir + 'results_ranked_all.csv', df=results_ranked_all)
+        save_pd.save(path=output_dir + 'results_ranked_by_dataset_all.csv', df=results_ranked_by_dataset_all)
+
+    print('################################################')
+    print('%s VS %s' % ('all', 'all'))
+    print('\tOnly datasets where all frameworks succeeded')
+    results_ranked_valid, results_ranked_by_dataset_valid = evaluate_utils.compare_frameworks(results_raw=results_raw, frameworks=frameworks, banned_datasets=banned_datasets, folds_to_keep=folds_to_keep, columns_to_agg_extra=columns_to_agg_extra, datasets=total_datasets)
+
+    if output_dir:
+        save_pd.save(path=output_dir + 'results_ranked_valid.csv', df=results_ranked_valid)
+        save_pd.save(path=output_dir + 'results_ranked_by_dataset_valid.csv', df=results_ranked_by_dataset_valid)
 
     calc_inf_diff = False
 
     all_results_pairs = {}
     for framework_2 in frameworks_compare_vs_all:
+        print(f'Computing comparison vs "{framework_2}"')
         results_list = []
 
         for framework_1 in total_frameworks:
             if framework_1 == framework_2:
                 results_ranked, results_ranked_by_dataset = evaluate_utils.compare_frameworks(results_raw=results_raw, frameworks=[framework_2], banned_datasets=banned_datasets, folds_to_keep=folds_to_keep, columns_to_agg_extra=columns_to_agg_extra, datasets=total_datasets, verbose=False)
                 ties = len(results_ranked_by_dataset)
-                results_list.append([framework_1, 0.5, 0, 0, ties, 0])
+                out = [framework_1, 0.5, 0, 0, ties, 0, 0]
+                if calc_inf_diff:
+                    out.append(0)
+                results_list.append(out)
                 continue
 
             results_ranked, results_ranked_by_dataset = evaluate_utils.compare_frameworks(results_raw=results_raw, frameworks=[framework_1, framework_2], banned_datasets=banned_datasets, folds_to_keep=folds_to_keep, columns_to_agg_extra=columns_to_agg_extra, datasets=total_datasets, verbose=False)
+
+            results_ranked_by_dataset_2 = copy.deepcopy(results_ranked_by_dataset)
+            # results_ranked_by_dataset_2['sign'] = 1 if results_ranked_by_dataset_2[FRAMEWORK] == framework_1 else -1
+
+            results_ranked_by_dataset_2.loc[results_ranked_by_dataset_2[FRAMEWORK] == framework_1, 'sign'] = -1
+            results_ranked_by_dataset_2.loc[results_ranked_by_dataset_2[FRAMEWORK] == framework_2, 'sign'] = 1
+
+            results_ranked_by_dataset_2 = results_ranked_by_dataset_2.sort_values(by=[BESTDIFF], ascending=False)
+            results_ranked_by_dataset_2 = results_ranked_by_dataset_2.drop_duplicates(subset=[DATASET], keep='first')
+            results_ranked_by_dataset_2[BESTDIFF] = results_ranked_by_dataset_2[BESTDIFF] * results_ranked_by_dataset_2['sign']
+
+            avg_diff2 = results_ranked_by_dataset_2[BESTDIFF].mean() * 100
+            median_diff = results_ranked_by_dataset_2[BESTDIFF].median() * 100
 
             bestdiff_1 = results_ranked[results_ranked[FRAMEWORK] == framework_1][BESTDIFF].iloc[0]
             bestdiff_2 = results_ranked[results_ranked[FRAMEWORK] == framework_2][BESTDIFF].iloc[0]
@@ -151,30 +185,16 @@ def evaluate(results_raw, frameworks=None, banned_datasets=None, folds_to_keep=N
                     raise AssertionError('Rank not valid: %s' % results_isolated_rank)
             winrate = (framework_1_wins + 0.5 * ties) / (framework_1_wins + framework_2_wins + ties)
 
-            out = [framework_1, winrate, framework_1_wins, framework_2_wins, ties, avg_diff]
+            out = [framework_1, winrate, framework_1_wins, framework_2_wins, ties, avg_diff, median_diff]
             if calc_inf_diff:
                 avg_inf_diffs = avg_inf_diffs / len(datasets_pair)
                 out.append(avg_inf_diffs)
             results_list.append(out)
-        out_col_names = [FRAMEWORK, 'winrate', '>', '<', '=', '% Less Avg. Errors']
+        out_col_names = [FRAMEWORK, 'winrate', '>', '<', '=', '% Less Avg. Errors', '% Less Errors (median)']
         if calc_inf_diff:
             out_col_names.append('Avg Inf Speed Diff')
         results_pairs = pd.DataFrame(data=results_list, columns=out_col_names)
         all_results_pairs[framework_2] = results_pairs
-
-    print('################################################')
-    print('%s VS %s' % ('all', 'all'))
-    print('\tAll datasets regardless of failures')
-    results_ranked_all, results_ranked_by_dataset_all = evaluate_utils.compare_frameworks(results_raw=results_raw, banned_datasets=banned_datasets, folds_to_keep=folds_to_keep, filter_errors=False, columns_to_agg_extra=columns_to_agg_extra, datasets=total_datasets)
-
-    if output_dir:
-        save_pd.save(path=output_dir + 'results_ranked_all.csv', df=results_ranked_all)
-        save_pd.save(path=output_dir + 'results_ranked_by_dataset_all.csv', df=results_ranked_by_dataset_all)
-
-    print('################################################')
-    print('%s VS %s' % ('all', 'all'))
-    print('\tOnly datasets where all frameworks succeeded')
-    results_ranked_valid, results_ranked_by_dataset_valid = evaluate_utils.compare_frameworks(results_raw=results_raw, frameworks=frameworks, banned_datasets=banned_datasets, folds_to_keep=folds_to_keep, columns_to_agg_extra=columns_to_agg_extra, datasets=total_datasets)
 
     results_pairs_merged_dict = {}
     for framework in frameworks_compare_vs_all:
@@ -202,9 +222,5 @@ def evaluate(results_raw, frameworks=None, banned_datasets=None, folds_to_keep=N
         if output_dir:
             save_pd.save(path=output_dir + 'pairwise/' + framework + '.csv', df=results_pairs_merged)
         results_pairs_merged_dict[framework] = results_pairs_merged
-
-    if output_dir:
-        save_pd.save(path=output_dir + 'results_ranked_valid.csv', df=results_ranked_valid)
-        save_pd.save(path=output_dir + 'results_ranked_by_dataset_valid.csv', df=results_ranked_by_dataset_valid)
 
     return results_ranked_valid, results_ranked_by_dataset_valid, results_ranked_all, results_ranked_by_dataset_all, results_pairs_merged_dict
