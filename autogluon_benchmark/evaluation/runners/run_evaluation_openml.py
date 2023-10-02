@@ -181,7 +181,7 @@ if __name__ == '__main__':
     parser.add_argument('--problem_types', type=str, help="Problem types to evaluate", choices=['binary', 'multiclass', 'regression'], default=['binary', 'multiclass', 'regression'], nargs="+")
     parser.add_argument('--folds_to_keep', type=int, help="Folds to keep for evaluation", nargs="*")
     parser.add_argument('--filter_errors', type=bool, help="Filter errors during evaluation", default=False)
-    parser.add_argument('--banned_datasets', type=str, help="Datasets to skip", default=['car', 'kr-vs-kp', 'OnlineNewsPopularity'], nargs='+')
+    parser.add_argument('--banned_datasets', type=str, help="Datasets to skip", default=None, nargs='+')
 
     args = parser.parse_args()
 
