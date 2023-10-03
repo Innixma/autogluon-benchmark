@@ -1,7 +1,4 @@
-import pandas as pd
-
 from autogluon.bench.eval.scripts.run_evaluation_openml import evaluate
-from autogluon.bench.eval.evaluation.benchmark_evaluator import BenchmarkEvaluator
 
 
 if __name__ == '__main__':
