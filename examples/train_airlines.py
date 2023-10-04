@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from autogluon_benchmark.tasks import task_loader, task_utils
+from autogluon_benchmark.tasks import task_loader, task_runner
 
 
 if __name__ == "__main__":
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         'verbosity': 2,
     }
 
-    predictors, scores = task_utils.run_task(task_id, n_folds=n_folds, init_args=init_args, fit_args=fit_args)
+    predictors, scores = task_runner.run_task(task_id, n_folds=n_folds, init_args=init_args, fit_args=fit_args)
     score = float(np.mean(scores))
     if len(scores) > 1:
         score_std = np.std(scores, ddof=1)

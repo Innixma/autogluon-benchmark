@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from autogluon_benchmark.tasks import task_loader, task_utils
+from autogluon_benchmark.tasks import task_loader, task_runner
 
 
 def run_task(task_name, fit_args=None):
@@ -12,7 +12,7 @@ def run_task(task_name, fit_args=None):
     if fit_args is None:
         fit_args = dict()
 
-    predictors, scores = task_utils.run_task(task_id, n_folds=n_folds, fit_args=fit_args, print_leaderboard=True)
+    predictors, scores = task_runner.run_task(task_id, n_folds=n_folds, fit_args=fit_args, print_leaderboard=True)
 
     score = float(np.mean(scores))
     num_models = float(np.mean([len(predictor.get_model_names()) for predictor in predictors]))

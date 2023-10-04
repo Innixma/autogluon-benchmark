@@ -5,7 +5,7 @@ from autogluon.common.loaders import load_pd
 from autogluon.common.savers import save_pd
 
 from autogluon_benchmark.evaluation.evaluate_utils import compare_frameworks
-from autogluon_benchmark.tasks import task_utils
+from autogluon_benchmark.tasks import task_runner
 from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
 
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         config2,
     ]
 
-    df_final = task_utils.run_configs(task_names=task_names, task_metadata=task_metadata_tiny, n_folds=n_folds, configs=configs)
+    df_final = task_runner.run_configs(task_names=task_names, task_metadata=task_metadata, n_folds=n_folds, configs=configs)
 
     with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
         print(df_final)
@@ -61,6 +61,7 @@ if __name__ == "__main__":
         name='framework',
         task_name='dataset',
         time_fit='time_train_s',
+        time_predict='time_infer_s',
         test_error='metric_error',
     ))
     out = compare_frameworks(results_raw=df_renamed)
