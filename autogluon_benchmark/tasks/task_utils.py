@@ -71,6 +71,14 @@ class TaskWrapper:
         task = get_task_with_retry(task_id=task_id)
         return cls(task)
 
+    @property
+    def task_id(self):
+        return self.task.task_id
+
+    def get_split_dimensions(self):
+        n_repeats, n_folds, n_samples = self.task.get_split_dimensions()
+        return n_repeats, n_folds, n_samples
+
     def combine_X_y(self):
         return pd.concat([self.X, self.y.to_frame(name=self.label)], axis=1)
 
@@ -101,13 +109,23 @@ class TaskWrapper:
         train_indices, test_indices = self.task.get_train_test_split_indices(repeat=repeat, fold=fold, sample=sample)
         return train_indices, test_indices
 
+    def get_train_test_split(self, repeat=0, fold=0, sample=0, train_indices=None, test_indices=None):
+        if train_indices is None or test_indices is None:
+            train_indices, test_indices = self.task.get_train_test_split_indices(repeat=repeat, fold=fold, sample=sample)
+        X_train = self.X.loc[train_indices]
+        y_train = self.y[train_indices]
+        X_test = self.X.loc[test_indices]
+        y_test = self.y[test_indices]
+        return X_train, y_train, X_test, y_test
+
 
 def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_args=None, print_leaderboard=True):
     if isinstance(task, int):
-        task = get_task_with_retry(task)
+        task_wrapper = TaskWrapper.from_task_id(task_id=task)
+    else:
+        task_wrapper = TaskWrapper(task=task)
 
-    problem_type = get_ag_problem_type(task)
-    n_repeats_full, n_folds_full, n_samples_full = task.get_split_dimensions()
+    n_repeats_full, n_folds_full, n_samples_full = task_wrapper.get_split_dimensions()
     if n_folds is None:
         n_folds = n_folds_full
     if n_repeats is None:
@@ -115,7 +133,6 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_a
     if n_samples is None:
         n_samples = n_samples_full
 
-    X, y = get_task_data(task=task)
     # X = convert_to_raw(X)
     results = []
     if isinstance(n_folds, int):
@@ -128,11 +145,7 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_a
                     fold=fold_idx,
                     sample=sample_idx,
                 )
-                train_indices, test_indices = task.get_train_test_split_indices(**split_info)
-                X_train = X.loc[train_indices]
-                y_train = y[train_indices]
-                X_test = X.loc[test_indices]
-                y_test = y[test_indices]
+                X_train, y_train, X_test, y_test = task_wrapper.get_train_test_split(**split_info)
 
                 print(
                                     'Repeat #{}, fold #{}, samples {}: X_train.shape: {}, '
@@ -147,16 +160,16 @@ def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_a
                 result = run(
                     X_train=X_train,
                     y_train=y_train,
-                    label=task.target_name,
+                    label=task_wrapper.label,
                     X_test=X_test,
                     y_test=y_test,
                     init_args=init_args,
                     fit_args=fit_args,
-                    problem_type=problem_type,
+                    problem_type=task_wrapper.problem_type,
                 )
                 result.update(split_info)
-                result['task_id'] = task.task_id
-                result['problem_type'] = problem_type
+                result['task_id'] = task_wrapper.task_id
+                result['problem_type'] = task_wrapper.problem_type
                 results.append(result)
 
     return results
