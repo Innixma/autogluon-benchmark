@@ -6,7 +6,7 @@ from autogluon.common.savers import save_pd, save_json
 from .task_utils import get_task_data, get_ag_problem_type, get_task_with_retry
 
 
-class TaskWrapper:
+class OpenMLTaskWrapper:
     def __init__(self, task: OpenMLSupervisedTask):
         assert isinstance(task, OpenMLSupervisedTask)
         self.task: OpenMLSupervisedTask = task

@@ -1,15 +1,15 @@
 import numpy as np
 import pandas as pd
 
-from .task_wrapper import TaskWrapper
+from .task_wrapper import OpenMLTaskWrapper
 from ..frameworks.autogluon.run import run
 
 
 def run_task(task, n_folds=None, n_repeats=1, n_samples=1, init_args=None, fit_args=None, print_leaderboard=True):
     if isinstance(task, int):
-        task_wrapper = TaskWrapper.from_task_id(task_id=task)
+        task_wrapper = OpenMLTaskWrapper.from_task_id(task_id=task)
     else:
-        task_wrapper = TaskWrapper(task=task)
+        task_wrapper = OpenMLTaskWrapper(task=task)
 
     n_repeats_full, n_folds_full, n_samples_full = task_wrapper.get_split_dimensions()
     if n_folds is None:
