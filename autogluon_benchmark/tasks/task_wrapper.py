@@ -69,3 +69,15 @@ class OpenMLTaskWrapper:
         X_test = self.X.loc[test_indices]
         y_test = self.y[test_indices]
         return X_train, y_train, X_test, y_test
+
+    def get_train_test_split_combined(self, repeat=0, fold=0, sample=0, train_indices=None, test_indices=None):
+        X_train, y_train, X_test, y_test = self.get_train_test_split(
+            repeat=repeat,
+            fold=fold,
+            sample=sample,
+            train_indices=train_indices,
+            test_indices=test_indices,
+        )
+        train_data = pd.concat([X_train, y_train.to_frame(name=self.label)], axis=1)
+        test_data = pd.concat([X_test, y_test.to_frame(name=self.label)], axis=1)
+        return train_data, test_data
