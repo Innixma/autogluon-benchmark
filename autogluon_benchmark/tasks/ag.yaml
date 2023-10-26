@@ -45,7 +45,7 @@
   openml_task_id: 359966
 
 - name: KDDCup09-Upselling
-  openml_task_id: 360115
+  openml_task_id: 360975
 
 - name: KDDCup09_appetency
   openml_task_id: 3945
@@ -54,7 +54,7 @@
   openml_task_id: 360112
 
 - name: MIP-2016-regression
-  openml_task_id: 359947
+  openml_task_id: 360945
 
 - name: Mercedes_Benz_Greener_Manufacturing
   openml_task_id: 233215
@@ -72,10 +72,10 @@
   openml_task_id: 359971
 
 - name: QSAR-TID-10980
-  openml_task_id: 14097
+  openml_task_id: 360933
 
 - name: QSAR-TID-11
-  openml_task_id: 13854
+  openml_task_id: 360932
 
 - name: SAT11-HAND-runtime-regression
   openml_task_id: 359948
