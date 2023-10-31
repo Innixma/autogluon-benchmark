@@ -7,7 +7,7 @@ requirements = [
     'openml>=0.14.1',
     's3fs',
     'autogluon',
-    'autogluon.bench',
+    # 'autogluon.bench',
     'pyyaml',
 ]
 
