@@ -5,6 +5,15 @@ Code for benchmarking AutoGluon.
 To get started, run the following commands:
 
 ```
+# Do this if you are locally developing AutoGluon to avoid installing it from pip:
+git clone https://github.com/autogluon/autogluon
+cd autogluon
+./full_install.sh
+cd ..
+```
+
+```
+# Install autogluon-benchmark
 git clone https://github.com/Innixma/autogluon-benchmark.git
 cd autogluon-benchmark
 pip install -e .
