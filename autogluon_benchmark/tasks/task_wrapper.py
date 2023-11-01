@@ -96,4 +96,9 @@ class AutoGluonTaskWrapper(OpenMLTaskWrapper):
         X_train, y_train, X_test, y_test = self.get_train_test_split(repeat=repeat, fold=fold, sample=sample)
         out = run(X_train=X_train, y_train=y_train, label=self.label, X_test=X_test, y_test=y_test,
                   init_args=init_args, fit_args=fit_args, extra_kwargs=extra_kwargs, problem_type=self.problem_type)
+        out["tid"] = self.task_id
+        out["problem_type"] = self.problem_type
+        out["repeat"] = repeat
+        out["fold"] = fold
+        out["sample"] = sample
         return out
