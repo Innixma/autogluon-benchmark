@@ -16,6 +16,7 @@ def result(*,
            test_score=None,
            val_score=None,
            test_error=None,
+           val_error=None,
            eval_metric=None,
            **others):
     return locals()
@@ -47,7 +48,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
     X_train = pd.concat([X_train, y_train.to_frame(name=label)], axis=1)
 
     with Timer() as timer_fit:
-        predictor = TabularPredictor(label=label, **init_args).fit(
+        predictor: TabularPredictor = TabularPredictor(label=label, **init_args).fit(
             train_data=X_train,
             **fit_args,
         )
@@ -71,7 +72,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
 
     eval_metric = predictor.eval_metric.name
     test_score = predictor.evaluate(X_test, silent=True, auxiliary_metrics=False)[eval_metric]
-    test_error = predictor.eval_metric._optimum - test_score
+    test_error = predictor.eval_metric.convert_score_to_error(test_score)
 
     _leaderboard_extra_info = extra_kwargs.get('_leaderboard_extra_info', False)  # whether to get extra model info (very verbose)
     _leaderboard_test = extra_kwargs.get('_leaderboard_test', True)  # whether to compute test scores in leaderboard (expensive)
@@ -83,7 +84,8 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
     leaderboard = predictor.leaderboard(**leaderboard_kwargs)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
         print(leaderboard)
-    score_val = leaderboard[leaderboard['model'] == predictor.get_model_best()]['score_val'].iloc[0]
+    val_score = leaderboard[leaderboard['model'] == predictor.get_model_best()]['score_val'].iloc[0]
+    val_error = predictor.eval_metric.convert_score_to_error(val_score)
 
     models_count = len(leaderboard)
 
@@ -98,8 +100,9 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
         time_predict=timer_predict.duration,
         # extra
         test_score=test_score,
-        val_score=score_val,
+        val_score=val_score,
         test_error=test_error,
+        val_error=val_error,
         eval_metric=eval_metric,
         predictor=predictor,
         leaderboard=leaderboard,

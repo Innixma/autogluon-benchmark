@@ -1,2 +1,2 @@
 from .benchmark_context import OutputContext, OutputSuiteContext
-from .tasks.task_wrapper import OpenMLTaskWrapper
+from .tasks.task_wrapper import AutoGluonTaskWrapper, OpenMLTaskWrapper

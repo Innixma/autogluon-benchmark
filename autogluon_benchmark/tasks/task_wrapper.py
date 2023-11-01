@@ -4,6 +4,7 @@ from openml.tasks.task import OpenMLSupervisedTask
 from autogluon.common.savers import save_pd, save_json
 
 from .task_utils import get_task_data, get_ag_problem_type, get_task_with_retry
+from ..frameworks.autogluon.run import run
 
 
 class OpenMLTaskWrapper:
@@ -81,3 +82,18 @@ class OpenMLTaskWrapper:
         train_data = pd.concat([X_train, y_train.to_frame(name=self.label)], axis=1)
         test_data = pd.concat([X_test, y_test.to_frame(name=self.label)], axis=1)
         return train_data, test_data
+
+
+class AutoGluonTaskWrapper(OpenMLTaskWrapper):
+    def run(
+            self,
+            repeat: int = 0,
+            fold: int = 0,
+            sample: int = 0,
+            init_args: dict = None,
+            fit_args: dict = None,
+            extra_kwargs: dict = None) -> dict:
+        X_train, y_train, X_test, y_test = self.get_train_test_split(repeat=repeat, fold=fold, sample=sample)
+        out = run(X_train=X_train, y_train=y_train, label=self.label, X_test=X_test, y_test=y_test,
+                  init_args=init_args, fit_args=fit_args, extra_kwargs=extra_kwargs, problem_type=self.problem_type)
+        return out
