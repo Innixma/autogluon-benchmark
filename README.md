@@ -2,9 +2,13 @@ Code for benchmarking AutoGluon.
 
 ## Development Installation
 
-First git clone autogluon and autogluon.bench repos and do a local install, then git clone this repo and do a local install.
+To get started, run the following commands:
 
-TODO: List commands
+```
+git clone https://github.com/Innixma/autogluon-benchmark.git
+cd autogluon-benchmark
+pip install -e .
+```
 
 ## Full AutoMLBenchmark
 
