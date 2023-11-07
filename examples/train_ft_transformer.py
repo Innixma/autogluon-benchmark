@@ -112,7 +112,7 @@ if __name__ == '__main__':
     print(tids)
 
     # tids = tids[:2]  # TODO: This is for demonstration purposes, comment this out to train on more datasets
-    folds = [0]  # How many folds ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9] is all folds), more folds = less noise in results
+    folds = [0, 1, 2, 3, 4]  # How many folds ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9] is all folds), more folds = less noise in results
 
     frameworks_dict = dict(
         FTT={
@@ -181,6 +181,31 @@ if __name__ == '__main__':
                 "FASTAI": {},
             },
         },
+        CAT={  # CatBoost
+            "hyperparameters": {
+                "CAT": {},
+            },
+        },
+        XGB={  # XGBoost
+            "hyperparameters": {
+                "XGB": {},
+            },
+        },
+        NN_TORCH={  # Torch Neural Network
+            "hyperparameters": {
+                "NN_TORCH": {},
+            },
+        },
+        RF={  # Random Forest
+            "hyperparameters": {
+                "RF": {},
+            },
+        },
+        XT={  # Extra Trees
+            "hyperparameters": {
+                "XT": {},
+            },
+        },
     )
     shared_args = dict(
         time_limit=3600,
@@ -195,7 +220,12 @@ if __name__ == '__main__':
         "FTT_v3",
         "FTT_v4",
         "GBM",
+        "XGB",
+        "CAT",
         "FASTAI",
+        "NN_TORCH",
+        "RF",
+        "XT",
     ]
 
     result_lst = []
