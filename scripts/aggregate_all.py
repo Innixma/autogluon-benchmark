@@ -6,7 +6,7 @@ import argparse
 import pandas as pd
 from tqdm import tqdm
 
-from autogluon.common.savers import save_pd, save_pkl
+from autogluon.common.savers import save_pd, save_pkl, save_str
 from autogluon.common.utils.s3_utils import s3_path_to_bucket_prefix
 
 from autogluon.bench.eval.benchmark_context.output_suite_context import OutputSuiteContext
@@ -57,6 +57,51 @@ def get_dataset_size_mb(
     return dataset_size_mb_df
 
 
+def save_zs_metadata_per_task(
+        results_valid_df: pd.DataFrame,
+        output_suite_context: OutputSuiteContext,
+        unique_tasks_dict: dict = None,
+        banned_tasks: list = None,
+):
+
+    if unique_tasks_dict is None:
+        unique_tasks_dict = results_valid_df[["task", "fold"]].groupby("task")["fold"].agg(set).to_dict()
+
+    for task, task_folds in unique_tasks_dict.items():
+        if banned_tasks:
+            if task in banned_tasks:
+                continue
+        for fold in task_folds:
+            output_path_task_fold = output_path + f'zeroshot_metadata/{task}/{fold}/'
+            print(f'{task}\t{fold}')
+            result_task_fold_indices = (results_valid_df["task"] == task) & (results_valid_df["fold"] == fold)
+            result_task_fold_df = results_valid_df[result_task_fold_indices]
+
+            output_suite_context_task_fold = output_suite_context.filter(filter_lst=list(result_task_fold_indices), inplace=False)
+
+            # Get overall size
+            # zeroshot_metadata_size_bytes = output_suite_context_task_fold.get_zeroshot_metadata_size_bytes(allow_exception=True)
+            # total_size = 0
+            # for b in zeroshot_metadata_size_bytes:
+            #     if b is not None:
+            #         total_size += b
+            #
+            # total_size_mb = total_size / 1e6
+            # print(f"\t{total_size_mb:.3f} MB")
+
+            aggregated_pred_proba, aggregated_ground_truth = load_zeroshot_metadata(
+                output_suite_context=output_suite_context_task_fold,
+                max_size_mb=None,
+            )
+
+            aggregated_pred_proba_path = f'{output_path_task_fold}zeroshot_pred_proba.pkl'
+            aggregated_ground_truth_path = f'{output_path_task_fold}zeroshot_gt.pkl'
+            print(f'Saving output to {output_path_task_fold}')
+
+            save_pkl.save(path=aggregated_pred_proba_path, object=aggregated_pred_proba)
+            save_pkl.save(path=aggregated_ground_truth_path, object=aggregated_ground_truth)
+
+
 def aggregate_all(path_prefix,
                   version_name=None,
                   use_version_name_str=False,
@@ -67,6 +112,7 @@ def aggregate_all(path_prefix,
                   aggregate_zeroshot=False,
                   aggregate_leaderboard=False,
                   aggregate_model_failures=False,
+                  aggregate_logs=False,
                   output_path=None,
                   keep_params=False,
                   invalid_datasets=None,
@@ -95,6 +141,13 @@ def aggregate_all(path_prefix,
         mode=mode,
     )
     print(f'Fetching results from {output_suite_context.num_contexts} OutputContexts')
+
+    sample_size = None
+    if sample_size is not None and sample_size < output_suite_context.num_contexts:
+        filter_lst = [i < sample_size for i in range(output_suite_context.num_contexts)]
+        output_suite_context.filter(filter_lst=filter_lst)
+        print(f'Filtered to {sample_size} contexts (sampling)')
+
     results_df_list = output_suite_context.load_results()
     len_results = len(results_df_list)
     if folds is not None:
@@ -107,6 +160,14 @@ def aggregate_all(path_prefix,
     output_suite_context.filter(filter_lst=[result is not None for result in results_df_list])
     print(f'Filtered to {output_suite_context.num_contexts} results '
           f'(Filtered results may have TIDs missing from `allowed_tids`)')
+
+    if aggregate_logs:
+        aggregated_logs_name = f'logs{constraint_str}{version_name_str}.txt'
+        aggregated_logs_path = f'{output_path}{aggregated_logs_name}'
+        print(f'Saving logs to "{aggregated_logs_path}"')
+        logs = output_suite_context.aggregate_logs()
+        save_str.save(path=aggregated_logs_path, data=logs)
+        print(f'Success! Saved logs to "{aggregated_logs_path}"')
 
     if aggregate_model_failures:
         model_failures_df = output_suite_context.aggregate_model_failures()
@@ -126,20 +187,42 @@ def aggregate_all(path_prefix,
     # FIXME: Drop duplicates before aggregating leaderboard / zeroshot
 
     if aggregate_leaderboard:
-        leaderboards_df = output_suite_context.aggregate_leaderboards()
+        leaderboards_list = output_suite_context.load_leaderboards()
+        leaderboards_df = output_suite_context.aggregate_leaderboards(leaderboards_list)
     else:
         leaderboards_df = None
 
-    if aggregate_zeroshot:
-        aggregated_pred_proba, aggregated_ground_truth = load_zeroshot_metadata(
-            output_suite_context=output_suite_context,
-            invalid_datasets=invalid_datasets,
-            folds=folds,
-            max_size_mb=max_size_mb,
-        )
-    else:
-        aggregated_pred_proba = None
-        aggregated_ground_truth = None
+    unique_tasks_dict = results_valid_df[["task", "fold"]].groupby("task")["fold"].agg(set).to_dict()
+
+    banned_tasks = [
+        "dionis",
+        "KDDCup99",
+        "Kuzushiji-49",
+        "Airlines_DepDelay_10M",
+        "pokerhand",
+        "sf-police-incidents",
+        "helena",
+        "covertype",
+        "Devnagari-Script",
+        "Higgs",
+        "walking-activity",
+        "spoken-arabic-digit",
+        "GTSRB-HOG01",
+        "GTSRB-HOG02",
+        "GTSRB-HOG03",
+        "GTSRB-HueHist",
+    ]
+
+    if leaderboards_df is not None:
+        # Dedupe leaderboard, keeping latest result in UTC
+        leaderboards_df_dedupe = leaderboards_df.sort_values(
+            by=["utc"], ascending=False
+        ).drop_duplicates(
+            subset=["model", "task", "fold"], keep="first"
+        ).sort_index()
+
+        leaderboards_df_only_zs = leaderboards_df_dedupe[leaderboards_df_dedupe["framework_parent"].str.contains("ZS_BAG_")]
+        leaderboards_df_only_zs = leaderboards_df_only_zs[leaderboards_df_only_zs["model"] != "autogluon_single"]
 
     aggregated_results_name = f'results{constraint_str}{version_name_str}.csv'
     aggregated_results_path = f'{output_path}{aggregated_results_name}'
@@ -179,17 +262,20 @@ def aggregate_all(path_prefix,
         )
 
     if aggregate_zeroshot:
-        max_mb_str = f'_{int(max_size_mb)}_mb' if max_size_mb is not None else ''
+        save_zs_metadata_per_task(
+            unique_tasks_dict=None,
+            banned_tasks=banned_tasks,
+            results_valid_df=results_valid_df,
+            output_suite_context=output_suite_context,
+        )
 
-        aggregated_pred_proba_path = f'{output_path}zeroshot_pred_proba{max_mb_str}.pkl'
-        aggregated_ground_truth_path = f'{output_path}zeroshot_gt{max_mb_str}.pkl'
-        print(f'Saving pred_proba output to {aggregated_pred_proba_path}')
-        print(f'Saving ground_truth output to {aggregated_ground_truth_path}')
-
-        save_pkl.save(path=aggregated_pred_proba_path, object=aggregated_pred_proba)
-        save_pkl.save(path=aggregated_ground_truth_path, object=aggregated_ground_truth)
-        print(f'Success! Saved pred_proba and ground_truth output.')
-    pass
+        if leaderboards_df is not None:
+            dataset_size_mb_df = get_dataset_size_mb(leaderboards_df=leaderboards_df, results_valid_df=results_valid_df, output_suite_context=output_suite_context)
+            dataset_size_mb_name = f'dataset_zs_size{constraint_str}{version_name_str}.csv'
+            dataset_size_mb_path = f'{output_path}{dataset_size_mb_name}'
+            print(f'Saving output to "{dataset_size_mb_path}"')
+            save_pd.save(path=dataset_size_mb_path, df=dataset_size_mb_df)
+            print(f'Success! Saved output to "{dataset_size_mb_path}"')
 
 
 if __name__ == '__main__':
@@ -236,6 +322,7 @@ if __name__ == '__main__':
         aggregate_leaderboard=True,
         aggregate_zeroshot=True,
         aggregate_model_failures=True,
+        aggregate_logs=False,
         max_size_mb=10,
         mode=args.mode,
     )
