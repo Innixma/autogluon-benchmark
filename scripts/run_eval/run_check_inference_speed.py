@@ -74,19 +74,20 @@ def plot_2(data, infer_speed_multiplier=None):
     fig = g.fig
 
     # Add a title to the Figure
-    fig.suptitle(f"AutoMLBenchmark 2022 Score vs Inference Throughput (104 datasets, 10-fold, 1 hour, 8 cores)", fontsize=16)
+    fig.suptitle(f"AutoMLBenchmark 2023 Score vs Inference Throughput (104 datasets, 10-fold, 1 hour, 8 cores)", fontsize=16)
     plt.show()
 
 
 if __name__ == '__main__':
-    results_dir = 'data/results/'
-    results_dir_input = results_dir + 'output/openml/2022_amlb_jmlr/'
-    results_dir_output = results_dir + 'output/openml/2022_amlb_jmlr/'
+    results_dir = "s3://autogluon-zeroshot/autogluon_v1/"  # s3 path
+    # results_dir = 'data/results/output/openml/autogluon_v1/'  # local path
+    results_dir_input = results_dir
+    results_dir_output = results_dir
     problem_type = 'all'
     run_path_prefix = f'1h8c/{problem_type}/'
     run_path_prefix_overall = f'1h8c_fillna/{problem_type}/'
 
-    framework_main = 'AutoGluon_hq_1h8c_2022_06_26_binary'
+    framework_main = 'AutoGluon_benchmark_1h8c_gp3_amlb_2023'
     framework_main_str = framework_main.replace('_', '\_')
 
     results_ranked_df = load_pd.load(f'{results_dir_input}{run_path_prefix}results_ranked_by_dataset_valid.csv')
@@ -157,8 +158,8 @@ if __name__ == '__main__':
         'AGv053_Jul30_high_il0_01_1h8c_2022_07_31_i01': 'AutoGluon High (v0.6), infer_limit=0.01',
         'AGv053_Jul30_high_il0_005_1h8c_2022_07_31_i005': 'AutoGluon High (v0.6), infer_limit=0.005',
         'AGv053_Jul30_high_il0_002_1h8c_2022_07_31_i002': 'AutoGluon High (v0.6), infer_limit=0.002',
-        # 'AutoGluon_benchmark_1h8c_gp3_2022_jmlr': 'AutoGluon Best (v0.3.1)',
-        'AutoGluon_bestquality_1h_2021_09_02': 'AutoGluon Best (v0.3.1)',
+        'AutoGluon_benchmark_1h8c_gp3_2022_jmlr': 'AutoGluon Best (v0.3.1)',
+        # 'AutoGluon_bestquality_1h_2021_09_02': 'AutoGluon Best (v0.3.1)',
         'AutoGluon_bestquality_1h_2021_02_06_v0_1_0': 'AutoGluon Best (v0.1.0)',
         'AutoGluon_mq_4h64c_2022_06_21_CatBoost': 'CatBoost (AutoGluon v0.6)',
         'AutoGluon_mq_4h64c_2022_06_21_LightGBM': 'LightGBM (AutoGluon v0.6)',
