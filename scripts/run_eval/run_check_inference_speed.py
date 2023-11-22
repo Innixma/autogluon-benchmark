@@ -8,8 +8,6 @@ import pandas as pd
 
 from autogluon.common.loaders import load_pd
 
-from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -50,12 +48,35 @@ def plot_1(data, task_metadata):
     plt.show()
 
 
+def get_pareto_frontier(Xs, Ys, max_X=True, max_Y=True):
+    sorted_list = sorted([[Xs[i], Ys[i]] for i in range(len(Xs))], reverse=max_X)
+    pareto_front = [sorted_list[0]]
+    for pair in sorted_list[1:]:
+        if max_Y:
+            if pair[1] >= pareto_front[-1][1]:
+                if len(pareto_front) != 0:
+                    pareto_front.append([pair[0], pareto_front[-1][1]])
+                pareto_front.append(pair)
+        else:
+            if pair[1] <= pareto_front[-1][1]:
+                if len(pareto_front) != 0:
+                    pareto_front.append([pair[0], pareto_front[-1][1]])
+                pareto_front.append(pair)
+    pareto_front.append([sorted_list[-1][0], pareto_front[-1][1]])
+    return pareto_front
+
+
 def plot_2(data, infer_speed_multiplier=None):
     results_ranked_overall_df = data.copy()
     x_name = 'Predict Speed Per-Row (seconds) (median)'
     y_name = 'Normalized Result (Score)'
     results_ranked_overall_df[y_name] = 1 - results_ranked_overall_df['loss_rescaled']
     results_ranked_overall_df[x_name] = [dict_median[z[0]] for z in zip(results_ranked_overall_df['framework'])]
+    Xs = list(results_ranked_overall_df["Predict Speed Per-Row (seconds) (median)"])
+    Ys = list(results_ranked_overall_df["Normalized Result (Score)"])
+    # plot_pareto_frontier(Xs=Xs, Ys=Ys, maxX=False, maxY=True)
+    pareto_front = get_pareto_frontier(Xs=Xs, Ys=Ys, max_X=False, max_Y=True)
+
     if infer_speed_multiplier is not None:
         print(f'Altering inference speed by multipler: {infer_speed_multiplier}')
         results_ranked_overall_df[x_name] /= infer_speed_multiplier
@@ -69,6 +90,10 @@ def plot_2(data, infer_speed_multiplier=None):
         s=300,
         # aspect=1.6,
     )
+    pf_X = [pair[0] for pair in pareto_front]
+    pf_Y = [pair[1] for pair in pareto_front]
+    plt.plot(pf_X, pf_Y)
+
     plt.ylim(None, 1)
     g.set(xscale="log")
     fig = g.fig
@@ -79,29 +104,18 @@ def plot_2(data, infer_speed_multiplier=None):
 
 
 if __name__ == '__main__':
-    results_dir = "s3://autogluon-zeroshot/autogluon_v1/"  # s3 path
-    # results_dir = 'data/results/output/openml/autogluon_v1/'  # local path
+    # results_dir = "s3://autogluon-zeroshot/autogluon_v1/"  # s3 path
+    results_dir = 'data/results/output/openml/autogluon_v1/'  # local path
     results_dir_input = results_dir
     results_dir_output = results_dir
     problem_type = 'all'
-    run_path_prefix = f'1h8c/{problem_type}/'
-    run_path_prefix_overall = f'1h8c_fillna/{problem_type}/'
-
-    framework_main = 'AutoGluon_benchmark_1h8c_gp3_amlb_2023'
-    framework_main_str = framework_main.replace('_', '\_')
+    run_path_prefix = f'4h8c/{problem_type}/'
+    run_path_prefix_overall = f'4h8c_fillna/{problem_type}/'
 
     results_ranked_df = load_pd.load(f'{results_dir_input}{run_path_prefix}results_ranked_by_dataset_valid.csv')
     results_ranked_overall_df = load_pd.load(f'{results_dir_input}{run_path_prefix_overall}results_ranked_valid.csv')
 
     results_ranked_df['dataset'] = results_ranked_df['dataset'].astype(str)
-
-    task_metadata = load_task_metadata()
-    task_metadata['tid'] = task_metadata['tid'].astype(str)
-    task_metadata['dataset'] = task_metadata['tid']
-
-    # large_datasets = set(task_metadata[task_metadata['NumberOfInstances'] >= 10000]['tid'].unique())
-    # results_ranked_df = results_ranked_df[results_ranked_df['dataset'].isin(large_datasets)]
-
     results_ranked_df['rows_per_second'] = 1 / results_ranked_df['time_infer_s']
 
     a = list(results_ranked_df['framework'].unique())
@@ -114,8 +128,6 @@ if __name__ == '__main__':
 
     dict_mean = dict()
     dict_median = dict()
-
-    results_ranked_df['rows_per_second'] = 1 / results_ranked_df['time_infer_s']
 
     for f in a:
         b = list(results_ranked_df[results_ranked_df['framework'] == f]['time_infer_s'])
@@ -145,9 +157,6 @@ if __name__ == '__main__':
         #     print(f'$1 dollar mean: {round(rows_per_dollar_mean / 1e6)}M')
         # else:
         #     print(f'$1 dollar mean: {round(rows_per_dollar_mean/1000)}k')
-
-
-    plot_1(results_ranked_df, task_metadata=task_metadata)
 
     hue_rename_dict = {
         'Ensemble_AG_FTT_all_bq_mytest24h_2022_09_14_v3': 'AutoGluon Experimental (v0.7), GPU, 24hr',
@@ -185,3 +194,9 @@ if __name__ == '__main__':
     # results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'], ascending=True)
 
     plot_2(results_ranked_overall_df, infer_speed_multiplier=None)
+
+    from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
+    task_metadata = load_task_metadata()
+    task_metadata['tid'] = task_metadata['tid'].astype(str)
+    task_metadata['dataset'] = task_metadata['name']
+    plot_1(results_ranked_df, task_metadata=task_metadata)
