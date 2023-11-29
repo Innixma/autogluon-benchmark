@@ -66,7 +66,7 @@ def get_pareto_frontier(Xs, Ys, max_X=True, max_Y=True):
     return pareto_front
 
 
-def plot_2(data, infer_speed_multiplier=None):
+def plot_2(data, infer_speed_multiplier=None, problem_type: str = None, save_prefix: str = None,):
     results_ranked_overall_df = data.copy()
     x_name = 'Predict Speed Per-Row (seconds) (median)'
     y_name = 'Normalized Result (Score)'
@@ -98,8 +98,20 @@ def plot_2(data, infer_speed_multiplier=None):
     g.set(xscale="log")
     fig = g.fig
 
+    title = f"AutoMLBenchmark 2023 Score vs Inference Throughput (104 datasets, 10-fold, 4 hour, 8 cores"
+    if problem_type is not None:
+        title += f", problem_type={problem_type}"
+    title += ")"
+
     # Add a title to the Figure
-    fig.suptitle(f"AutoMLBenchmark 2023 Score vs Inference Throughput (104 datasets, 10-fold, 1 hour, 8 cores)", fontsize=16)
+    fig.suptitle(title, fontsize=16)
+    if save_prefix is not None:
+        if problem_type is not None:
+            save_path = f"{save_prefix}pareto_front_{problem_type}.png"
+        else:
+            save_path = f"{save_prefix}pareto_front.png"
+
+        plt.savefig(save_path)
     plt.show()
 
 
@@ -109,94 +121,119 @@ if __name__ == '__main__':
     results_dir_input = results_dir
     results_dir_output = results_dir
     problem_type = 'all'
-    run_path_prefix = f'4h8c/{problem_type}/'
-    run_path_prefix_overall = f'4h8c_fillna/{problem_type}/'
+    for problem_type in [
+        "all",
+        # "binary",
+        # "multiclass",
+        # "regression",
+    ]:
+        run_path_prefix = f'4h8c/{problem_type}/'
+        run_path_prefix_overall = f'4h8c_fillna/{problem_type}/'
 
-    results_ranked_df = load_pd.load(f'{results_dir_input}{run_path_prefix}results_ranked_by_dataset_valid.csv')
-    results_ranked_overall_df = load_pd.load(f'{results_dir_input}{run_path_prefix_overall}results_ranked_valid.csv')
+        results_ranked_df = load_pd.load(f'{results_dir_input}{run_path_prefix}results_ranked_by_dataset_valid.csv')
+        results_ranked_overall_df = load_pd.load(f'{results_dir_input}{run_path_prefix_overall}results_ranked_valid.csv')
 
-    results_ranked_df['dataset'] = results_ranked_df['dataset'].astype(str)
-    results_ranked_df['rows_per_second'] = 1 / results_ranked_df['time_infer_s']
+        results_ranked_df['dataset'] = results_ranked_df['dataset'].astype(str)
+        results_ranked_df['rows_per_second'] = 1 / results_ranked_df['time_infer_s']
 
-    a = list(results_ranked_df['framework'].unique())
-    print(a)
+        a = list(results_ranked_df['framework'].unique())
+        print(a)
 
-    # Price Spot Instance m5.2xlarge (US East Ohio) on May 8th 2022 : $0.0873 / hour
-    price_per_hour = 0.0873
-    hour_per_dollar = 1/price_per_hour
-    second_per_dollar = hour_per_dollar * 3600
+        # Price Spot Instance m5.2xlarge (US East Ohio) on May 8th 2022 : $0.0873 / hour
+        price_per_hour = 0.0873
+        hour_per_dollar = 1/price_per_hour
+        second_per_dollar = hour_per_dollar * 3600
 
-    dict_mean = dict()
-    dict_median = dict()
+        dict_mean = dict()
+        dict_median = dict()
 
-    for f in a:
-        b = list(results_ranked_df[results_ranked_df['framework'] == f]['time_infer_s'])
-        c = list(results_ranked_df[results_ranked_df['framework'] == f]['rows_per_second'])
-        # print(f'{f} | {len(b)}')
-        b.sort()
-        # print(b)
-        b_mean = np.mean(b)
-        c_mean = np.mean(c)
-        c_median = np.median(c)
+        for f in a:
+            b = list(results_ranked_df[results_ranked_df['framework'] == f]['time_infer_s'])
+            c = list(results_ranked_df[results_ranked_df['framework'] == f]['rows_per_second'])
+            # print(f'{f} | {len(b)}')
+            b.sort()
+            # print(b)
+            b_mean = np.mean(b)
+            c_mean = np.mean(c)
+            c_median = np.median(c)
 
-        dict_mean[f] = b_mean
-        b_median = np.median(b)
-        dict_median[f] = b_median
-        rows_per_s_mean = 1/b_mean
-        rows_per_s_median = 1/b_median
-        print(f'{f}\t| rows_per_s_mean={round(rows_per_s_mean, 2)} | rows_per_s_median={round(rows_per_s_median, 2)}')
-        # print(f'true_mean {c_mean}')
-        # print(f'true_median {c_median}')
-        rows_per_dollar_mean = rows_per_s_mean * second_per_dollar
-        rows_per_dollar_median = rows_per_s_median*second_per_dollar
-        if rows_per_dollar_median > 1e8:
-            print(f'$1 dollar : {round(rows_per_dollar_median / 1e6)}M')
-        else:
-            print(f'$1 dollar : {round(rows_per_dollar_median/1000)}k')
-        # if rows_per_dollar_mean > 1e8:
-        #     print(f'$1 dollar mean: {round(rows_per_dollar_mean / 1e6)}M')
-        # else:
-        #     print(f'$1 dollar mean: {round(rows_per_dollar_mean/1000)}k')
+            dict_mean[f] = b_mean
+            b_median = np.median(b)
+            dict_median[f] = b_median
+            rows_per_s_mean = 1/b_mean
+            rows_per_s_median = 1/b_median
+            print(f'{f}\t| rows_per_s_mean={round(rows_per_s_mean, 2)} | rows_per_s_median={round(rows_per_s_median, 2)}')
+            # print(f'true_mean {c_mean}')
+            # print(f'true_median {c_median}')
+            rows_per_dollar_mean = rows_per_s_mean * second_per_dollar
+            rows_per_dollar_median = rows_per_s_median*second_per_dollar
+            if rows_per_dollar_median > 1e8:
+                print(f'$1 dollar : {round(rows_per_dollar_median / 1e6)}M')
+            else:
+                print(f'$1 dollar : {round(rows_per_dollar_median/1000)}k')
+            # if rows_per_dollar_mean > 1e8:
+            #     print(f'$1 dollar mean: {round(rows_per_dollar_mean / 1e6)}M')
+            # else:
+            #     print(f'$1 dollar mean: {round(rows_per_dollar_mean/1000)}k')
 
-    hue_rename_dict = {
-        'Ensemble_AG_FTT_all_bq_mytest24h_2022_09_14_v3': 'AutoGluon Experimental (v0.7), GPU, 24hr',
-        'Ensemble_AG_FTT_all_bq_mytest4h_2022_09_14_v2': 'AutoGluon Experimental (v0.7), GPU, 4hr',
-        'Ensemble_AG_bq_mytest4h_2022_09_14_v2': 'AutoGluon Best (v0.6), 4hr',
-        'AutoGluon_bq_1h8c_2022_06_26_binary': 'AutoGluon Best (v0.6)',
-        'AutoGluon_hq_1h8c_2022_06_26_binary': 'AutoGluon High (v0.6)',
-        'AGv053_Jul30_high_il0_01_1h8c_2022_07_31_i01': 'AutoGluon High (v0.6), infer_limit=0.01',
-        'AGv053_Jul30_high_il0_005_1h8c_2022_07_31_i005': 'AutoGluon High (v0.6), infer_limit=0.005',
-        'AGv053_Jul30_high_il0_002_1h8c_2022_07_31_i002': 'AutoGluon High (v0.6), infer_limit=0.002',
-        'AutoGluon_benchmark_1h8c_gp3_2022_jmlr': 'AutoGluon Best (v0.3.1)',
-        # 'AutoGluon_bestquality_1h_2021_09_02': 'AutoGluon Best (v0.3.1)',
-        'AutoGluon_bestquality_1h_2021_02_06_v0_1_0': 'AutoGluon Best (v0.1.0)',
-        'AutoGluon_mq_4h64c_2022_06_21_CatBoost': 'CatBoost (AutoGluon v0.6)',
-        'AutoGluon_mq_4h64c_2022_06_21_LightGBM': 'LightGBM (AutoGluon v0.6)',
-        'AutoGluon_mq_4h64c_2022_06_21_XGBoost': 'XGBoost (AutoGluon v0.6)',
-        'GAMA_benchmark_1h8c_gp3_2022_jmlr': 'GAMA',
-        'H2OAutoML_1h8c_gp3_2022_jmlr': 'H2OAutoML',
-        'TPOT_1h8c_gp3_2022_jmlr': 'TPOT',
-        'TunedRandomForest_1h8c_gp3_2022_jmlr': 'TunedRandomForest',
-        'autosklearn_1h8c_gp3_2022_jmlr': 'autosklearn',
-        'flaml_1h8c_gp3_2022_jmlr': 'flaml',
-        'lightautoml_1h8c_gp3_2022_jmlr': 'lightautoml',
-        'mljarsupervised_benchmark_1h8c_gp3_2022_jmlr': 'mljarsupervised',
-    }
-    framework_order = list(hue_rename_dict.values())
-    results_ranked_overall_df['Framework'] = results_ranked_overall_df['framework'].map(hue_rename_dict).fillna(results_ranked_overall_df['framework'])
-    framework_vals = list(results_ranked_overall_df['Framework'].values)
-    framework_order = [f for f in framework_order if f in framework_vals]
-    framework_other = [f for f in framework_vals if f not in framework_order]
-    framework_order += framework_other
-    results_ranked_overall_df['Framework'] = pd.Categorical(results_ranked_overall_df['Framework'], framework_order)
-    results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'])
+        hue_rename_dict = {
+            'Ensemble_AG_FTT_all_bq_mytest24h_2022_09_14_v3': 'AutoGluon Experimental (v0.7), GPU, 24hr',
+            'Ensemble_AG_FTT_all_bq_mytest4h_2022_09_14_v2': 'AutoGluon Experimental (v0.7), GPU, 4hr',
+            'Ensemble_AG_bq_mytest4h_2022_09_14_v2': 'AutoGluon Best (v0.6), 4hr',
+            'AutoGluon_bq_1h8c_2022_06_26_binary': 'AutoGluon Best (v0.6)',
+            'AutoGluon_hq_1h8c_2022_06_26_binary': 'AutoGluon High (v0.6)',
+            'AGv053_Jul30_high_il0_01_1h8c_2022_07_31_i01': 'AutoGluon High (v0.6), infer_limit=0.01',
+            'AGv053_Jul30_high_il0_005_1h8c_2022_07_31_i005': 'AutoGluon High (v0.6), infer_limit=0.005',
+            'AGv053_Jul30_high_il0_002_1h8c_2022_07_31_i002': 'AutoGluon High (v0.6), infer_limit=0.002',
+            'AutoGluon_benchmark_1h8c_gp3_2022_jmlr': 'AutoGluon Best (v0.3.1)',
+            # 'AutoGluon_bestquality_1h_2021_09_02': 'AutoGluon Best (v0.3.1)',
+            'AutoGluon_bestquality_1h_2021_02_06_v0_1_0': 'AutoGluon Best (v0.1.0)',
+            'AutoGluon_mq_4h64c_2022_06_21_CatBoost': 'CatBoost (AutoGluon v0.6)',
+            'AutoGluon_mq_4h64c_2022_06_21_LightGBM': 'LightGBM (AutoGluon v0.6)',
+            'AutoGluon_mq_4h64c_2022_06_21_XGBoost': 'XGBoost (AutoGluon v0.6)',
+            'GAMA_benchmark_1h8c_gp3_2022_jmlr': 'GAMA',
+            'H2OAutoML_1h8c_gp3_2022_jmlr': 'H2OAutoML',
+            'TPOT_1h8c_gp3_2022_jmlr': 'TPOT',
+            'TunedRandomForest_1h8c_gp3_2022_jmlr': 'TunedRandomForest',
+            'autosklearn_1h8c_gp3_2022_jmlr': 'autosklearn',
+            'flaml_1h8c_gp3_2022_jmlr': 'flaml',
+            'lightautoml_1h8c_gp3_2022_jmlr': 'lightautoml',
+            'mljarsupervised_benchmark_1h8c_gp3_2022_jmlr': 'mljarsupervised',
+        }
+        framework_order = list(hue_rename_dict.values())
+        framework_order = [
+            "AutoGluon v1.0 (Best, 4h8c)",
+            "AutoGluon v1.0 (High, 4h8c)",
+            "AutoGluon v1.0 (High, 4h8c, infer_limit=0.001)",
+            "AutoGluon v1.0 (High, 4h8c, infer_limit=0.0005)",
+            "AutoGluon v1.0 (High, 4h8c, infer_limit=0.0001)",
+            "AutoGluon v0.8.2 (Best, 4h8c)",
+            "AutoGluon v0.8.2 (High, 4h8c)",
+        ] + framework_order
 
-    # results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'], ascending=True)
+        results_ranked_overall_df['Framework'] = results_ranked_overall_df['framework'].map(hue_rename_dict).fillna(results_ranked_overall_df['framework'])
+        framework_vals = list(results_ranked_overall_df['Framework'].values)
+        framework_order = [f for f in framework_order if f in framework_vals]
+        framework_other = [f for f in framework_vals if f not in framework_order]
+        framework_other = sorted(framework_other)
+        framework_order += framework_other
+        results_ranked_overall_df['Framework'] = pd.Categorical(results_ranked_overall_df['Framework'], framework_order)
+        results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'])
 
-    plot_2(results_ranked_overall_df, infer_speed_multiplier=None)
+        # results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'], ascending=True)
 
-    from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
-    task_metadata = load_task_metadata()
-    task_metadata['tid'] = task_metadata['tid'].astype(str)
-    task_metadata['dataset'] = task_metadata['name']
-    plot_1(results_ranked_df, task_metadata=task_metadata)
+        plot_2(results_ranked_overall_df, infer_speed_multiplier=None, problem_type=problem_type, save_prefix=results_dir_output)
+
+        # from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
+        # task_metadata = load_task_metadata()
+        # task_metadata['tid'] = task_metadata['tid'].astype(str)
+        # task_metadata['dataset'] = task_metadata['name']
+        # plot_1(results_ranked_df, task_metadata=task_metadata)
+
+    from autogluon.common.utils.s3_utils import upload_s3_folder, upload_file
+
+    # upload_s3_folder(bucket="autogluon-zeroshot", prefix="autogluon_v1/", folder_to_upload="data/results/output/openml/autogluon_v1/")
+    import shutil
+
+    shutil.make_archive("results", 'zip', "data/results/output/openml/autogluon_v1")
+    upload_file(file_name="results.zip", bucket="autogluon-zeroshot", prefix="autogluon_v1")
