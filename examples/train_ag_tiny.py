@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 from autogluon.common.loaders import load_pd
@@ -11,7 +10,7 @@ from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
 
 if __name__ == "__main__":
     save_path_prefix = 'out/ag_tiny/'
-    task_metadata = load_task_metadata('task_metadata_289.csv')
+    task_metadata = load_task_metadata('task_metadata_244.csv')
     task_metadata = task_metadata.drop_duplicates(subset=['name'])
     task_metadata_tiny = task_metadata[task_metadata['NumberOfInstances'] <= 1000]
     task_metadata_tiny = task_metadata_tiny[task_metadata_tiny['NumberOfFeatures'] <= 100]
@@ -64,4 +63,7 @@ if __name__ == "__main__":
         time_predict='time_infer_s',
         test_error='metric_error',
     ))
-    out = compare_frameworks(results_raw=df_renamed)
+    out = compare_frameworks(
+        results_raw=df_renamed,
+        columns_to_agg_extra=['time_infer_s']
+    )
