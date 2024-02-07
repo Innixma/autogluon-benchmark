@@ -76,7 +76,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
 
     _leaderboard_extra_info = extra_kwargs.get('_leaderboard_extra_info', False)  # whether to get extra model info (very verbose)
     _leaderboard_test = extra_kwargs.get('_leaderboard_test', True)  # whether to compute test scores in leaderboard (expensive)
-    leaderboard_kwargs = dict(silent=True, extra_info=_leaderboard_extra_info)
+    leaderboard_kwargs = dict(extra_info=_leaderboard_extra_info)
     # Disabled leaderboard test data input by default to avoid long running computation, remove 7200s timeout limitation to re-enable
     if _leaderboard_test:
         leaderboard_kwargs['data'] = X_test
@@ -84,7 +84,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
     leaderboard = predictor.leaderboard(**leaderboard_kwargs)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
         print(leaderboard)
-    val_score = leaderboard[leaderboard['model'] == predictor.get_model_best()]['score_val'].iloc[0]
+    val_score = leaderboard[leaderboard['model'] == predictor.model_best]['score_val'].iloc[0]
     val_error = predictor.eval_metric.convert_score_to_error(val_score)
 
     models_count = len(leaderboard)

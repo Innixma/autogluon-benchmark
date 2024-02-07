@@ -102,3 +102,17 @@ class AutoGluonTaskWrapper(OpenMLTaskWrapper):
         out["fold"] = fold
         out["sample"] = sample
         return out
+
+    def out_to_amlb_results(self, out: dict, framework: str, dataset: str) -> pd.DataFrame:
+        results = out.copy()
+        results["framework"] = framework
+        results["dataset"] = dataset
+        results.pop("predictions")
+        results.pop("probabilities")
+        results.pop("truth")
+        results.pop("others")
+        df_results = pd.DataFrame([results])
+        ordered_columns = ["dataset", "fold", "framework", "test_error", "val_error", "eval_metric", "test_score", "val_score", "time_fit"]
+        columns_reorder = ordered_columns + [c for c in df_results.columns if c not in ordered_columns]
+        df_results = df_results[columns_reorder]
+        return df_results

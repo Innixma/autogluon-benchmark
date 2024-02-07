@@ -3,7 +3,7 @@ import time
 
 from autogluon.common.savers import save_pd
 
-from .. import OutputSuiteContext
+from autogluon.bench.eval.benchmark_context.output_suite_context import OutputSuiteContext
 
 
 def aggregate_leaderboards(path_prefix: str, contains=None, keep_params=True, include_infer_speed=False, mode='seq'):

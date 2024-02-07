@@ -1,6 +1,6 @@
 from autogluon.common.savers import save_pkl
 
-from .. import OutputSuiteContext
+from autogluon.bench.eval.benchmark_context.output_suite_context import OutputSuiteContext
 
 
 def load_zeroshot_metadata(output_suite_context, invalid_datasets=None, folds=None, max_size_mb=10):

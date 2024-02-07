@@ -1,6 +1,6 @@
 from autogluon.common.savers import save_pd
 
-from .. import OutputSuiteContext
+from autogluon.bench.eval.benchmark_context.output_suite_context import OutputSuiteContext
 
 
 def aggregate_results(s3_bucket,
