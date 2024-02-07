@@ -67,6 +67,7 @@ def save_zs_metadata_per_task(
     if unique_tasks_dict is None:
         unique_tasks_dict = results_valid_df[["task", "fold"]].groupby("task")["fold"].agg(set).to_dict()
 
+    output_path_data_dir = output_path + 'model_predictions/'
     for task, task_folds in unique_tasks_dict.items():
         if banned_tasks:
             if task in banned_tasks:
@@ -94,6 +95,13 @@ def save_zs_metadata_per_task(
                 max_size_mb=None,
             )
 
+            from tabrepo.predictions import TabularPredictionsInMemory
+            from tabrepo.simulation.ground_truth import GroundTruth
+            tabular_predictions = TabularPredictionsInMemory.from_dict(aggregated_pred_proba)
+            tabular_predictions.to_data_dir(data_dir=output_path_data_dir)
+            ground_truth = GroundTruth.from_dict(aggregated_ground_truth)
+            ground_truth.to_data_dir(data_dir=output_path_data_dir)
+
             aggregated_pred_proba_path = f'{output_path_task_fold}zeroshot_pred_proba.pkl'
             aggregated_ground_truth_path = f'{output_path_task_fold}zeroshot_gt.pkl'
             print(f'Saving output to {output_path_task_fold}')
@@ -103,6 +111,7 @@ def save_zs_metadata_per_task(
 
 
 def aggregate_all(path_prefix,
+                  paths_extra=None,
                   version_name=None,
                   use_version_name_str=False,
                   constraint=None,
@@ -117,7 +126,6 @@ def aggregate_all(path_prefix,
                   keep_params=False,
                   invalid_datasets=None,
                   folds=None,
-                  max_size_mb=100,
                   mode='ray'):
     s3_bucket, s3_prefix = s3_path_to_bucket_prefix(s3_path=path_prefix)
     if output_path is None:
@@ -134,6 +142,7 @@ def aggregate_all(path_prefix,
     print(f'Initializing OutputSuiteContext from path="{path_prefix}"')
     output_suite_context = OutputSuiteContext(
         path=path_prefix,
+        paths_extra=paths_extra,
         contains=contains,
         allowed_tids=allowed_tids,
         include_infer_speed=include_infer_speed,
@@ -299,30 +308,37 @@ if __name__ == '__main__':
     include_infer_speed = False
     keep_params = False
 
-    VERSION_NAME_HACK = "2023_07_25"
-    VERSION_NAME_HACK = "2023_08_21"
+    VERSION_NAME_HACK = "2024_01_29"
+
+    s3_bucket = args.s3_bucket
+
     version_name = VERSION_NAME_HACK
 
-    path_prefix = f's3://{args.s3_bucket}/{args.s3_prefix}{version_name}/'
+    path_prefix = f's3://{s3_bucket}/{args.s3_prefix}{version_name}/'
+
+    paths_extra = [
+        # f's3://{s3_bucket}/{args.s3_prefix}2023_11_10/',
+        # f's3://{s3_bucket}/{args.s3_prefix}2023_08_21/',
+    ]
 
     # task_metadata_244 = load_task_metadata(path='task_metadata_244.csv')
     task_metadata_289 = load_task_metadata(path='task_metadata_289.csv')
     allowed_tids = set(list(task_metadata_289['tid']))
 
-    output_path = f's3://{args.s3_bucket}/aggregated/ec2/{version_name}/'
+    output_path = f's3://{s3_bucket}/aggregated/ec2/{version_name}/'
 
     aggregate_all(
         path_prefix=path_prefix,
+        paths_extra=paths_extra,
         version_name=version_name,
         # constraint=args.constraint,
-        allowed_tids=allowed_tids,
+        # allowed_tids=allowed_tids,
         include_infer_speed=include_infer_speed,
         keep_params=keep_params,
         output_path=output_path,
         aggregate_leaderboard=True,
-        aggregate_zeroshot=True,
+        aggregate_zeroshot=False,
         aggregate_model_failures=True,
         aggregate_logs=False,
-        max_size_mb=10,
         mode=args.mode,
     )

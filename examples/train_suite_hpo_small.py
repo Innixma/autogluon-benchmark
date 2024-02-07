@@ -15,7 +15,7 @@ def run_task(task_name, fit_args=None):
     predictors, scores = task_runner.run_task(task_id, n_folds=n_folds, fit_args=fit_args, print_leaderboard=True)
 
     score = float(np.mean(scores))
-    num_models = float(np.mean([len(predictor.get_model_names()) for predictor in predictors]))
+    num_models = float(np.mean([len(predictor.model_names()) for predictor in predictors]))
     if len(scores) > 1:
         score_std = np.std(scores, ddof=1)
     else:
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     fit_args = {
         'hyperparameters': {'GBM': {}, 'CAT': {}, 'NN': {}},
         'hyperparameter_tune': True,
-        'time_limits': 60,
+        'time_limit': 60,
     }
 
     task_scores = dict()
