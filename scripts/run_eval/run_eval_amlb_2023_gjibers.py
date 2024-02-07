@@ -11,7 +11,7 @@ if __name__ == '__main__':
         'H2OAutoML',
         'lightautoml',
         'GAMA_benchmark',
-        # 'mljarsupervised_benchmark',
+        'mljarsupervised_benchmark',
         # 'mljarsupervised_perform',
         # 'TPOT',
         # 'TunedRandomForest',
@@ -29,27 +29,25 @@ if __name__ == '__main__':
     treat_folds_as_datasets = False
     task_metadata = "task_metadata.csv"
     infer_batch_size = None
-    evaluate(
+
+    evaluate_kwargs = dict(
         paths=paths,
         frameworks_run=frameworks_run,
-        output_suffix=f'2023_amlb_jmlr/1h8c/all',
+        filter_errors=False,
         problem_type=problem_types,
         treat_folds_as_datasets=treat_folds_as_datasets,
         infer_batch_size=infer_batch_size,
-        filter_errors=False,
-        use_tid_as_dataset_name=use_tid_as_dataset_name,
         task_metadata=task_metadata,
+        use_tid_as_dataset_name=use_tid_as_dataset_name,
+    )
+
+    evaluate(
+        output_suffix=f'2023_amlb_jmlr/1h8c/all',
+        **evaluate_kwargs,
     )
     evaluate(
-        paths=paths,
-        frameworks_run=frameworks_run,
         output_suffix=f'2023_amlb_jmlr/1h8c_fillna/all',
         framework_nan_fill='constantpredictor_1h8c_gp3_amlb_2023',
-        problem_type=problem_types,
-        treat_folds_as_datasets=treat_folds_as_datasets,
-        infer_batch_size=infer_batch_size,
-        filter_errors=False,
-        use_tid_as_dataset_name=use_tid_as_dataset_name,
         compute_z_score=False,
-        task_metadata=task_metadata,
+        **evaluate_kwargs,
     )
