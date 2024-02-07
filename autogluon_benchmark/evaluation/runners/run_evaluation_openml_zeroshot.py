@@ -143,7 +143,7 @@ if __name__ == '__main__':
     path_input_suffix = "2023_08_21"
     path_input = f"{s3_input_dir}/{path_input_suffix}"
 
-    path_output_suffix = "2023_08_21_dummy"
+    path_output_suffix = "2024_01_30"
     path_output = f"{s3_input_dir}/{path_output_suffix}"
 
     ts = time.time()
@@ -170,6 +170,7 @@ if __name__ == '__main__':
 
     paths_configs = [
         f'{path_input}/leaderboard_preprocessed.csv',
+        f's3://automl-benchmark-ag/aggregated/ec2/2024_01_29/leaderboard_preprocessed.parquet',
         # "s3://automl-benchmark-ag/aggregated/ec2/2023_11_10/leaderboard_preprocessed.csv",
         # "s3://automl-benchmark-ag/aggregated/ec2/2023_11_14/leaderboard_preprocessed.csv",
     ]
@@ -308,7 +309,7 @@ if __name__ == '__main__':
     ]]
     results_raw_configs_to_save = results_raw_configs_to_save.sort_values(by=["dataset", "fold", "framework"]).reset_index(drop=True)
 
-    path_leaderboard_preprocessed_configs = f'{path_output}/leaderboard_preprocessed_configs.csv'
+    path_leaderboard_preprocessed_configs = f'{path_output}/configs.csv'
     save_pd.save(path=path_leaderboard_preprocessed_configs, df=results_raw_configs_to_save)
     save_pd.save(path=f'{path_output}/configs.parquet', df=results_raw_configs_to_save)
 
@@ -365,22 +366,42 @@ if __name__ == '__main__':
     frameworks_run_zeroshot = [zs_name for zs_name in frameworks_run_zeroshot_all if 'ZS_BAG_' in zs_name]
     frameworks_run_zeroshot = [zs_name for zs_name in frameworks_run_zeroshot if 'autogluon_single' not in zs_name]
 
+    def update_rename_dict(rename_dict: dict, frameworks_lst: List[str], split_str: str) -> dict:
+        for f in frameworks_lst:
+            if f not in rename_dict:
+                f_rename = f.rsplit(split_str, 1)
+                if len(f_rename) == 2:
+                    f_rename = f_rename[-1]
+                    rename_dict[f] = f_rename
+        return rename_dict
+
+
+    frameworks_run_zeroshot_rename = dict()
+
+    split_strs = []
+
     # FIXME: TEMP
     constraint = '60h8c'
     constraint_str = f'_{constraint}'
     run_name = '2023_08_21'
     run_name_str = f'_{run_name}'
 
-    frameworks_run_zeroshot_rename = {f: f.rsplit(f'{constraint_str}{run_name_str}_', 1)[-1] for f in
-                                      frameworks_run_zeroshot}
+    split_strs.append(f'{constraint_str}{run_name_str}_')
+
     # FIXME: TEMP
     constraint = '60h8c_gpu'
     constraint_str = f'_{constraint}'
     run_name = '2023_11_10'
     run_name_str = f'_{run_name}'
 
-    frameworks_run_zeroshot_rename.update({f: f.rsplit(f'{constraint_str}{run_name_str}_', 1)[-1] for f in
-                                      frameworks_run_zeroshot})
+    split_strs.append(f'{constraint_str}{run_name_str}_')
+
+    constraint = '60h8c_gpu'
+    constraint_str = f'_{constraint}'
+    run_name = '2023_11_14'
+    run_name_str = f'_{run_name}'
+
+    split_strs.append(f'{constraint_str}{run_name_str}_')
 
     # FIXME: TEMP
     constraint = '60h8c'
@@ -388,8 +409,22 @@ if __name__ == '__main__':
     run_name = '2023_11_14'
     run_name_str = f'_{run_name}'
 
-    frameworks_run_zeroshot_rename.update({f: f.rsplit(f'{constraint_str}{run_name_str}_', 1)[-1] for f in
-                                      frameworks_run_zeroshot})
+    split_strs.append(f'{constraint_str}{run_name_str}_')
+
+    # FIXME: TEMP
+    constraint = '60h8c_gpu'
+    constraint_str = f'_{constraint}'
+    run_name = '2024_01_29'
+    run_name_str = f'_{run_name}'
+
+    split_strs.append(f'{constraint_str}{run_name_str}_')
+
+    for split_str in split_strs:
+        frameworks_run_zeroshot_rename = update_rename_dict(
+            rename_dict=frameworks_run_zeroshot_rename,
+            frameworks_lst=frameworks_run_zeroshot,
+            split_str=split_str,
+        )
 
     # banned_frameworks += frameworks_run_zeroshot
 
