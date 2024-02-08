@@ -72,11 +72,12 @@ def plot_pareto(
     x_name: str,
     y_name: str,
     title: str,
-    save_path: str = None,
     palette='Paired',
     hue: str = "Framework",
     max_X: bool = False,
     max_Y: bool = True,
+    save_path: str = None,
+    show: bool = True,
 ):
     g = sns.relplot(
         x=x_name,
@@ -108,7 +109,8 @@ def plot_pareto(
     if save_path is not None:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path)
-    plt.show()
+    if show:
+        plt.show()
 
 
 def plot_pareto_aggregated(
@@ -123,6 +125,7 @@ def plot_pareto_aggregated(
     hue: str = "Framework",
     title: str = None,
     save_path: str = None,
+    show: bool = True,
     include_method_in_axis_name: bool = True,
 ):
     if data_x is None:
@@ -145,6 +148,7 @@ def plot_pareto_aggregated(
         max_X=max_X,
         max_Y=max_Y,
         hue=hue,
+        show=show,
     )
 
 
@@ -157,7 +161,8 @@ def plot_boxplot(
     higher_is_better: bool = True,
     xlim: tuple = None,
     xscale: str = None,
-    save_path: str = None
+    save_path: str = None,
+    show: bool = True,
 ):
     if sort:
         order = data[[y, x]].groupby([y]).agg(["median", "mean"]).sort_values(by=[(x, "median"), (x, "mean")], ascending=not higher_is_better)
@@ -184,7 +189,8 @@ def plot_boxplot(
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path)
 
-    plt.show()
+    if show:
+        plt.show()
 
 
 def aggregate_stats(df, on: str, groupby="framework", method=["mean", "median", "std"]):
@@ -200,11 +206,13 @@ class Plotter:
         results_ranked_fillna_df: pd.DataFrame,
         results_ranked_df: pd.DataFrame,
         save_dir: str = None,
+        show: bool = True,
     ):
         self.results_ranked_fillna_df = results_ranked_fillna_df
         self.results_ranked_df = results_ranked_df
         self._verify_integrity()
         self.save_dir = save_dir
+        self.show = show
 
     def _filename(self, name):
         if self.save_dir is not None:
@@ -235,6 +243,7 @@ class Plotter:
             higher_is_better=False,
             xlim=(0.995, max_rank),
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_boxplot_rescaled_accuracy(self):
@@ -251,6 +260,7 @@ class Plotter:
             higher_is_better=True,
             xlim=(-0.001, 1),
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_boxplot_time_train(self):
@@ -268,6 +278,7 @@ class Plotter:
             xscale="log",
             # xlim=(-0.001, 1),
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_boxplot_samples_per_second(self):
@@ -285,6 +296,7 @@ class Plotter:
             xscale="log",
             # xlim=(-0.001, 1),
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_boxplot_samples_per_dollar(self, seconds_per_dollar: float):
@@ -305,6 +317,7 @@ class Plotter:
             xscale="log",
             # xlim=(-0.001, 1),
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_boxplot_champion_loss_delta(self):
@@ -321,6 +334,7 @@ class Plotter:
             higher_is_better=False,
             xlim=(-0.1, 100),
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_pareto_time_infer(self):
@@ -343,6 +357,7 @@ class Plotter:
             max_Y=True,
             title=title,
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_pareto_time_train(self):
@@ -365,6 +380,7 @@ class Plotter:
             max_Y=True,
             title=title,
             save_path=save_path,
+            show=self.show,
         )
 
     def plot_critical_difference(self):
@@ -380,7 +396,8 @@ class Plotter:
         if save_path is not None:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path)
-        plt.show()
+        if self.show:
+            plt.show()
 
 
 # TODO: Fix the input so that everything is in a function and it can be called at the end of `run_eval_autogluon_v1.py`
@@ -388,7 +405,6 @@ if __name__ == '__main__':
     # results_dir = "s3://autogluon-zeroshot/autogluon_v1/"  # s3 path
     results_dir = 'data/results/output/openml/autogluon_v1/'  # local path
     results_dir_input = results_dir
-    results_dir_output = results_dir
 
     # Price Spot Instance m5.2xlarge (US East Ohio) on May 8th 2022 : $0.0873 / hour
     price_per_hour = 0.0873
@@ -413,49 +429,11 @@ if __name__ == '__main__':
             results_ranked_df = results_ranked_df[results_ranked_df["problem_type"] == problem_type]
             results_ranked_fillna_df = results_ranked_fillna_df[results_ranked_fillna_df["problem_type"] == problem_type]
 
-        hue_rename_dict = {
-            'Ensemble_AG_FTT_all_bq_mytest24h_2022_09_14_v3': 'AutoGluon Experimental (v0.7), GPU, 24hr',
-            'Ensemble_AG_FTT_all_bq_mytest4h_2022_09_14_v2': 'AutoGluon Experimental (v0.7), GPU, 4hr',
-            'Ensemble_AG_bq_mytest4h_2022_09_14_v2': 'AutoGluon Best (v0.6), 4hr',
-            'AutoGluon_bq_1h8c_2022_06_26_binary': 'AutoGluon Best (v0.6)',
-            'AutoGluon_hq_1h8c_2022_06_26_binary': 'AutoGluon High (v0.6)',
-            'AGv053_Jul30_high_il0_01_1h8c_2022_07_31_i01': 'AutoGluon High (v0.6), infer_limit=0.01',
-            'AGv053_Jul30_high_il0_005_1h8c_2022_07_31_i005': 'AutoGluon High (v0.6), infer_limit=0.005',
-            'AGv053_Jul30_high_il0_002_1h8c_2022_07_31_i002': 'AutoGluon High (v0.6), infer_limit=0.002',
-            'AutoGluon_benchmark_1h8c_gp3_2022_jmlr': 'AutoGluon Best (v0.3.1)',
-            # 'AutoGluon_bestquality_1h_2021_09_02': 'AutoGluon Best (v0.3.1)',
-            'AutoGluon_bestquality_1h_2021_02_06_v0_1_0': 'AutoGluon Best (v0.1.0)',
-            'AutoGluon_mq_4h64c_2022_06_21_CatBoost': 'CatBoost (AutoGluon v0.6)',
-            'AutoGluon_mq_4h64c_2022_06_21_LightGBM': 'LightGBM (AutoGluon v0.6)',
-            'AutoGluon_mq_4h64c_2022_06_21_XGBoost': 'XGBoost (AutoGluon v0.6)',
-            'GAMA_benchmark_1h8c_gp3_2022_jmlr': 'GAMA',
-            'H2OAutoML_1h8c_gp3_2022_jmlr': 'H2OAutoML',
-            'TPOT_1h8c_gp3_2022_jmlr': 'TPOT',
-            'TunedRandomForest_1h8c_gp3_2022_jmlr': 'TunedRandomForest',
-            'autosklearn_1h8c_gp3_2022_jmlr': 'autosklearn',
-            'flaml_1h8c_gp3_2022_jmlr': 'flaml',
-            'lightautoml_1h8c_gp3_2022_jmlr': 'lightautoml',
-            'mljarsupervised_benchmark_1h8c_gp3_2022_jmlr': 'mljarsupervised',
-        }
-        framework_order = list(hue_rename_dict.values())
-        framework_order = [
-            "AutoGluon 1.0 (Best, 4h8c)",
-            "AutoGluon 1.0 (Best, 1h8c)",
-            "AutoGluon 1.0 (Best, 30m8c)",
-            "AutoGluon 1.0 (Best, 10m8c)",
-            "AutoGluon 1.0 (Best, 5m8c)",
-            "AutoGluon 1.0 (High, 4h8c)",
-            "AutoGluon 1.0 (High, 4h8c, infer_limit=0.001)",
-            "AutoGluon 1.0 (High, 4h8c, infer_limit=0.0005)",
-            "AutoGluon 1.0 (High, 4h8c, infer_limit=0.0001)",
-            "AutoGluon 0.8.2 (Best, 4h8c)",
-            "AutoGluon 0.8.2 (High, 4h8c)",
-        ] + framework_order
-
         plotter = Plotter(
             results_ranked_fillna_df=results_ranked_fillna_df,
             results_ranked_df=results_ranked_df,
-            save_dir=f"test_out/{problem_type}/"
+            save_dir=f"test_out/{problem_type}/",
+            show=True,
         )
 
         plotter.plot_boxplot_rescaled_accuracy()
