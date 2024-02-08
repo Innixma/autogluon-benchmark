@@ -196,6 +196,7 @@ def plot_boxplot(
     plt.show()
 
 
+# TODO: Fix the input so that everything is in a function and it can be called at the end of `run_eval_autogluon_v1.py`
 if __name__ == '__main__':
     # results_dir = "s3://autogluon-zeroshot/autogluon_v1/"  # s3 path
     results_dir = 'data/results/output/openml/autogluon_v1/'  # local path
@@ -330,10 +331,10 @@ if __name__ == '__main__':
             xlim=(-0.001, 1),
         )
         tmp = results_ranked_fillna_df[["framework", "dataset", "bestdiff"]]
-        tmp["Champion Accuracy Delta (%), Lower is Better"] = tmp["bestdiff"] * 100
+        tmp["Champion Loss Delta (%), Lower is Better"] = tmp["bestdiff"] * 100
         plot_boxplot(
             df=tmp,
-            x="Champion Accuracy Delta (%), Lower is Better",
+            x="Champion Loss Delta (%), Lower is Better",
             y="framework",
             title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
             sort=True,
