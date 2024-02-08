@@ -63,7 +63,6 @@ if __name__ == '__main__':
         # "AutoGluon_hq_v1_il0001_4h8c_2023_11_26",
         # "AutoGluon_hq_v1_il00005_4h8c_2023_11_26",
         # "AutoGluon_hq_v1_il00001_4h8c_2023_11_26",
-        # "AutoGluon_hq_v1_il000005_4h8c_2023_11_26",
 
         # "AutoGluon_bq_1h8c_2023_11_29",
         # "AutoGluon_bq_30m8c_2023_11_29",
@@ -152,11 +151,11 @@ if __name__ == '__main__':
         frameworks_rename=frameworks_rename,
     )
 
-    # evaluate(
-    #     problem_type=problem_types,
-    #     output_suffix=f'{output_prefix}/{constraint}/all',
-    #     **evaluate_kwargs,
-    # )
+    evaluate(
+        problem_type=problem_types,
+        output_suffix=f'{output_prefix}/{constraint}/all',
+        **evaluate_kwargs,
+    )
     evaluate(
         problem_type=problem_types,
         output_suffix=f'{output_prefix}/{constraint}_fillna/all',
