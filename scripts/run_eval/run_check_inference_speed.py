@@ -351,7 +351,7 @@ if __name__ == '__main__':
             title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
             sort=True,
             higher_is_better=False,
-            xlim=(0.999, max_rank),
+            xlim=(0.995, max_rank),
         )
 
         # from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
