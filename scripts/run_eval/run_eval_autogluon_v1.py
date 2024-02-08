@@ -36,7 +36,7 @@ if __name__ == '__main__':
         'GAMA_benchmark',
         'mljarsupervised_benchmark',
         # 'mljarsupervised_perform',
-        'TPOT',
+        # 'TPOT',
         'TunedRandomForest',
         'RandomForest',
         # # 'NaiveAutoML',
