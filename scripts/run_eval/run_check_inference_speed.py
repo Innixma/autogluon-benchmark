@@ -114,59 +114,46 @@ def plot_pareto(
     plt.show()
 
 
-def plot_pareto_infer_time(data, infer_speed_multiplier=None, problem_type: str = None, save_prefix: str = None):
-    results_ranked_overall_df = data.copy()
-    x_name = 'Predict Speed Per-Row (seconds) (median)'
-    y_name = 'Rescaled Accuracy'
-    results_ranked_overall_df[y_name] = 1 - results_ranked_overall_df['loss_rescaled']
-    results_ranked_overall_df[x_name] = [dict_median[z[0]] for z in zip(results_ranked_overall_df['framework'])]
-
-    if infer_speed_multiplier is not None:
-        print(f'Altering inference speed by multipler: {infer_speed_multiplier}')
-        results_ranked_overall_df[x_name] /= infer_speed_multiplier
-
-    title = f"AutoMLBenchmark 2023 Accuracy vs Inference Throughput (104 datasets, 10-fold, 4 hour, 8 cores"
-    if problem_type is not None and problem_type != "all":
-        title += f", problem_type={problem_type}"
-    title += ")"
+def plot_pareto_aggregated(
+    data: pd.DataFrame,
+    x_name: str,
+    y_name: str,
+    data_x: pd.DataFrame = None,
+    x_method: str = "median",
+    y_method: str = "mean",
+    max_X: bool = False,
+    max_Y: bool = True,
+    hue: str = "Framework",
+    title: str = None,
+    save_prefix: str = None,
+    include_method_in_axis_name: bool = True,
+):
+    if data_x is None:
+        data_x = data
+    y_vals = aggregate_stats(df=data, on=y_name, method=[y_method])[y_method]
+    x_vals = aggregate_stats(df=data_x, on=x_name, method=[x_method])[x_method]
+    if include_method_in_axis_name:
+        x_name = f'{x_name} ({x_method})'
+        y_name = f'{y_name} ({y_method})'
+    df_aggregated = y_vals.to_frame(name=y_name)
+    df_aggregated[x_name] = x_vals
+    df_aggregated[hue] = df_aggregated.index
 
     plot_pareto(
-        data=results_ranked_overall_df,
+        data=df_aggregated,
         x_name=x_name,
         y_name=y_name,
         title=title,
         save_prefix=save_prefix,
-        max_X=False,
-        max_Y=True,
-    )
-
-
-def plot_pareto_train_time(data, problem_type: str = None, save_prefix: str = None):
-    results_ranked_overall_df = data.copy()
-    x_name = 'Train Time (seconds) (median)'
-    y_name = 'Rescaled Accuracy'
-    results_ranked_overall_df[y_name] = 1 - results_ranked_overall_df['loss_rescaled']
-    results_ranked_overall_df[x_name] = [dict_mean_train_s[z[0]] for z in zip(results_ranked_overall_df['framework'])]
-
-    title = f"AutoMLBenchmark 2023 Accuracy vs Train Time (104 datasets, 10-fold, 4 hour, 8 cores"
-    if problem_type is not None and problem_type != "all":
-        title += f", problem_type={problem_type}"
-    title += ")"
-
-    plot_pareto(
-        data=results_ranked_overall_df,
-        x_name=x_name,
-        y_name=y_name,
-        title=title,
-        save_prefix=save_prefix,
-        max_X=False,
-        max_Y=True,
+        max_X=max_X,
+        max_Y=max_Y,
+        hue=hue,
     )
 
 
 # TODO: Save plots
 def plot_boxplot(
-    df: pd.DataFrame,
+    data: pd.DataFrame,
     x: str,
     y: str = "framework",
     title: str = None,
@@ -175,14 +162,14 @@ def plot_boxplot(
     xlim: tuple = None,
 ):
     if sort:
-        order = df[[y, x]].groupby([y]).agg(["median", "mean"]).sort_values(by=[(x, "median"), (x, "mean")], ascending=not higher_is_better)
+        order = data[[y, x]].groupby([y]).agg(["median", "mean"]).sort_values(by=[(x, "median"), (x, "mean")], ascending=not higher_is_better)
         order = list(order.index)
     else:
         order = None
 
     fig, ax = plt.subplots(figsize=(20, 10))
     ax = sns.boxplot(
-        data=tmp,
+        data=data,
         ax=ax,
         y=y,
         x=x,
@@ -194,6 +181,113 @@ def plot_boxplot(
         ax.set_title(title)
 
     plt.show()
+
+
+def aggregate_stats(df, on: str, groupby="framework", method=["mean", "median", "std"]):
+    return df[[groupby, on]].groupby(groupby).agg(method)[on]
+
+
+class Plotter:
+    def __init__(
+        self,
+        results_ranked_fillna_df: pd.DataFrame,
+        results_ranked_df: pd.DataFrame,
+        results_ranked_overall_df: pd.DataFrame,
+    ):
+        self.results_ranked_fillna_df = results_ranked_fillna_df
+        self.results_ranked_df = results_ranked_df
+        self.results_ranked_overall_df = results_ranked_overall_df
+        self._verify_integrity()
+
+    def _verify_integrity(self):
+        unique_frameworks = set(self.results_ranked_fillna_df["framework"].unique())
+        unique_datasets = set(self.results_ranked_fillna_df["dataset"].unique())
+        assert unique_frameworks == set(self.results_ranked_df["framework"].unique())
+        assert unique_frameworks == set(self.results_ranked_overall_df["framework"].unique())
+        assert len(self.results_ranked_overall_df) == len(unique_frameworks)
+        assert len(results_ranked_fillna_df) == (len(unique_frameworks) * len(unique_datasets))
+
+    def plot_boxplot_rank(self):
+        data = self.results_ranked_fillna_df[["framework", "rank"]].copy()
+        data["Rank, Lower is Better"] = data["rank"]
+        max_rank = data["Rank, Lower is Better"].max()
+        plot_boxplot(
+            data=data,
+            x="Rank, Lower is Better",
+            y="framework",
+            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
+            sort=True,
+            higher_is_better=False,
+            xlim=(0.995, max_rank),
+        )
+
+    def plot_boxplot_rescaled_accuracy(self):
+        data = self.results_ranked_fillna_df[["framework", "loss_rescaled"]].copy()
+        data["Rescaled Accuracy, Higher is Better"] = 1 - data["loss_rescaled"]
+        plot_boxplot(
+            data=data,
+            x="Rescaled Accuracy, Higher is Better",
+            y="framework",
+            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
+            sort=True,
+            higher_is_better=True,
+            xlim=(-0.001, 1),
+        )
+
+    def plot_boxplot_champion_loss_delta(self):
+        data = self.results_ranked_fillna_df[["framework", "bestdiff"]].copy()
+        data["Champion Loss Delta (%), Lower is Better"] = data["bestdiff"] * 100
+        plot_boxplot(
+            data=data,
+            x="Champion Loss Delta (%), Lower is Better",
+            y="framework",
+            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
+            sort=True,
+            higher_is_better=False,
+            xlim=(-0.1, 100),
+        )
+
+    def plot_pareto_infer_time(self, save_prefix: str):
+        y_name = "Rescaled Accuracy"
+        x_name = "Inference Time Per-Row (seconds)"
+        title = f"AutoMLBenchmark 2023 Accuracy vs Inference Time (104 datasets, 10-fold)"
+        data_x = self.results_ranked_df.copy()
+        data_x[x_name] = data_x["time_infer_s"]
+        data = self.results_ranked_fillna_df.copy()
+        data[y_name] = 1 - data["loss_rescaled"]
+        plot_pareto_aggregated(
+            data=data,
+            data_x=data_x,
+            x_name=x_name,
+            y_name=y_name,
+            x_method="median",
+            y_method="mean",
+            max_X=False,
+            max_Y=True,
+            title=title,
+            save_prefix=save_prefix,
+        )
+
+    def plot_pareto_train_time(self, save_prefix: str):
+        y_name = "Rescaled Accuracy"
+        x_name = "Train Time (seconds)"
+        title = f"AutoMLBenchmark 2023 Accuracy vs Train Time (104 datasets, 10-fold)"
+        data_x = self.results_ranked_df.copy()
+        data_x[x_name] = data_x["time_train_s"]
+        data = self.results_ranked_fillna_df.copy()
+        data[y_name] = 1 - data["loss_rescaled"]
+        plot_pareto_aggregated(
+            data=data,
+            data_x=data_x,
+            x_name=x_name,
+            y_name=y_name,
+            x_method="mean",
+            y_method="mean",
+            max_X=False,
+            max_Y=True,
+            title=title,
+            save_prefix=save_prefix,
+        )
 
 
 # TODO: Fix the input so that everything is in a function and it can be called at the end of `run_eval_autogluon_v1.py`
@@ -313,46 +407,19 @@ if __name__ == '__main__':
         framework_order += framework_other
         results_ranked_overall_df['Framework'] = pd.Categorical(results_ranked_overall_df['Framework'], framework_order)
         results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'])
-
         # results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'], ascending=True)
 
-        plot_pareto_infer_time(results_ranked_overall_df, infer_speed_multiplier=None, problem_type=problem_type, save_prefix=results_dir_output)
-        plot_pareto_train_time(results_ranked_overall_df, problem_type=problem_type, save_prefix=f"{results_dir_output}train_time_")
+        plotter = Plotter(
+            results_ranked_fillna_df=results_ranked_fillna_df,
+            results_ranked_df=results_ranked_df,
+            results_ranked_overall_df=results_ranked_overall_df,
+        )
 
-        tmp = results_ranked_fillna_df[["framework", "dataset", "loss_rescaled"]]
-        tmp["Rescaled Accuracy, Higher is Better"] = 1 - tmp["loss_rescaled"]
-        plot_boxplot(
-            df=tmp,
-            x="Rescaled Accuracy, Higher is Better",
-            y="framework",
-            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
-            sort=True,
-            higher_is_better=True,
-            xlim=(-0.001, 1),
-        )
-        tmp = results_ranked_fillna_df[["framework", "dataset", "bestdiff"]]
-        tmp["Champion Loss Delta (%), Lower is Better"] = tmp["bestdiff"] * 100
-        plot_boxplot(
-            df=tmp,
-            x="Champion Loss Delta (%), Lower is Better",
-            y="framework",
-            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
-            sort=True,
-            higher_is_better=False,
-            xlim=(-0.1, 100),
-        )
-        tmp = results_ranked_fillna_df[["framework", "dataset", "rank"]]
-        tmp["Rank, Lower is Better"] = tmp["rank"]
-        max_rank = tmp["Rank, Lower is Better"].max()
-        plot_boxplot(
-            df=tmp,
-            x="Rank, Lower is Better",
-            y="framework",
-            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
-            sort=True,
-            higher_is_better=False,
-            xlim=(0.995, max_rank),
-        )
+        plotter.plot_boxplot_rescaled_accuracy()
+        plotter.plot_boxplot_champion_loss_delta()
+        plotter.plot_boxplot_rank()
+        plotter.plot_pareto_infer_time(save_prefix=results_dir_output)
+        plotter.plot_pareto_train_time(save_prefix=f"{results_dir_output}train_time_")
 
         # from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
         # task_metadata = load_task_metadata()
