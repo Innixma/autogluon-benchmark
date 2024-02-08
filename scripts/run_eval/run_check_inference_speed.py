@@ -5,6 +5,7 @@ TODO: Refactor this, it is currently very hacky
 
 import numpy as np
 import pandas as pd
+import os
 
 from autogluon.common.loaders import load_pd
 
@@ -71,7 +72,7 @@ def plot_pareto(
     x_name: str,
     y_name: str,
     title: str,
-    save_prefix: str = None,
+    save_path: str = None,
     palette='Paired',
     hue: str = "Framework",
     max_X: bool = False,
@@ -104,12 +105,8 @@ def plot_pareto(
 
     # Add a title to the Figure
     fig.suptitle(title, fontsize=14)
-    if save_prefix is not None:
-        if problem_type is not None:
-            save_path = f"{save_prefix}pareto_front_{problem_type}.png"
-        else:
-            save_path = f"{save_prefix}pareto_front.png"
-
+    if save_path is not None:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path)
     plt.show()
 
@@ -125,7 +122,7 @@ def plot_pareto_aggregated(
     max_Y: bool = True,
     hue: str = "Framework",
     title: str = None,
-    save_prefix: str = None,
+    save_path: str = None,
     include_method_in_axis_name: bool = True,
 ):
     if data_x is None:
@@ -144,14 +141,13 @@ def plot_pareto_aggregated(
         x_name=x_name,
         y_name=y_name,
         title=title,
-        save_prefix=save_prefix,
+        save_path=save_path,
         max_X=max_X,
         max_Y=max_Y,
         hue=hue,
     )
 
 
-# TODO: Save plots
 def plot_boxplot(
     data: pd.DataFrame,
     x: str,
@@ -160,6 +156,8 @@ def plot_boxplot(
     sort: bool = True,
     higher_is_better: bool = True,
     xlim: tuple = None,
+    xscale: str = None,
+    save_path: str = None
 ):
     if sort:
         order = data[[y, x]].groupby([y]).agg(["median", "mean"]).sort_values(by=[(x, "median"), (x, "mean")], ascending=not higher_is_better)
@@ -179,6 +177,12 @@ def plot_boxplot(
         ax.set(xlim=xlim)
     if title is not None:
         ax.set_title(title)
+    if xscale is not None:
+        ax.set_xscale(xscale)
+
+    if save_path is not None:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
 
     plt.show()
 
@@ -188,66 +192,139 @@ def aggregate_stats(df, on: str, groupby="framework", method=["mean", "median", 
 
 
 class Plotter:
+    """
+    Class that can produce plots from AutoMLBenchmark results files
+    """
     def __init__(
         self,
         results_ranked_fillna_df: pd.DataFrame,
         results_ranked_df: pd.DataFrame,
-        results_ranked_overall_df: pd.DataFrame,
+        save_dir: str = None,
     ):
         self.results_ranked_fillna_df = results_ranked_fillna_df
         self.results_ranked_df = results_ranked_df
-        self.results_ranked_overall_df = results_ranked_overall_df
         self._verify_integrity()
+        self.save_dir = save_dir
+
+    def _filename(self, name):
+        if self.save_dir is not None:
+            return os.path.join(self.save_dir, name)
+        else:
+            return None
 
     def _verify_integrity(self):
         unique_frameworks = set(self.results_ranked_fillna_df["framework"].unique())
         unique_datasets = set(self.results_ranked_fillna_df["dataset"].unique())
         assert unique_frameworks == set(self.results_ranked_df["framework"].unique())
-        assert unique_frameworks == set(self.results_ranked_overall_df["framework"].unique())
-        assert len(self.results_ranked_overall_df) == len(unique_frameworks)
-        assert len(results_ranked_fillna_df) == (len(unique_frameworks) * len(unique_datasets))
+        assert len(self.results_ranked_fillna_df) == (len(unique_frameworks) * len(unique_datasets))
+        assert len(self.results_ranked_df.drop_duplicates(subset=["framework", "dataset"])) == len(self.results_ranked_df)
+        assert len(self.results_ranked_fillna_df.drop_duplicates(subset=["framework", "dataset"])) == len(self.results_ranked_fillna_df)
 
     def plot_boxplot_rank(self):
+        save_path = self._filename("boxplot_rank.png")
+        x = "Rank, Lower is Better"
         data = self.results_ranked_fillna_df[["framework", "rank"]].copy()
-        data["Rank, Lower is Better"] = data["rank"]
-        max_rank = data["Rank, Lower is Better"].max()
+        data[x] = data["rank"]
+        max_rank = data[x].max()
         plot_boxplot(
             data=data,
-            x="Rank, Lower is Better",
+            x=x,
             y="framework",
             title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
             sort=True,
             higher_is_better=False,
             xlim=(0.995, max_rank),
+            save_path=save_path,
         )
 
     def plot_boxplot_rescaled_accuracy(self):
+        save_path = self._filename("boxplot_rescaled_accuracy.png")
+        x = "Rescaled Accuracy, Higher is Better"
         data = self.results_ranked_fillna_df[["framework", "loss_rescaled"]].copy()
-        data["Rescaled Accuracy, Higher is Better"] = 1 - data["loss_rescaled"]
+        data[x] = 1 - data["loss_rescaled"]
         plot_boxplot(
             data=data,
-            x="Rescaled Accuracy, Higher is Better",
+            x=x,
             y="framework",
             title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
             sort=True,
             higher_is_better=True,
             xlim=(-0.001, 1),
+            save_path=save_path,
+        )
+
+    def plot_boxplot_time_train(self):
+        save_path = self._filename("boxplot_time_train.png")
+        x = "Train Time (seconds), Lower is Better"
+        data = self.results_ranked_df[["framework", "time_train_s"]].copy()
+        data[x] = data["time_train_s"]
+        plot_boxplot(
+            data=data,
+            x=x,
+            y="framework",
+            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
+            sort=True,
+            higher_is_better=False,
+            xscale="log",
+            # xlim=(-0.001, 1),
+            save_path=save_path,
+        )
+
+    def plot_boxplot_samples_per_second(self):
+        save_path = self._filename("boxplot_samples_per_second.png")
+        x = "Samples per Second (Inference), Higher is Better"
+        data = self.results_ranked_df[["framework", "time_infer_s"]].copy()
+        data[x] = 1/data["time_infer_s"]
+        plot_boxplot(
+            data=data,
+            x=x,
+            y="framework",
+            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
+            sort=True,
+            higher_is_better=True,
+            xscale="log",
+            # xlim=(-0.001, 1),
+            save_path=save_path,
+        )
+
+    def plot_boxplot_samples_per_dollar(self, seconds_per_dollar: float):
+        dollars_per_hour = 3600 / seconds_per_dollar
+        save_path = self._filename("boxplot_samples_per_dollar.png")
+        x = f"Samples per Dollar (Inference), Higher is Better (based on ${dollars_per_hour:.3f}/hour of compute)"
+        data = self.results_ranked_df[["framework", "time_infer_s"]].copy()
+
+        data["Samples per Second (Inference), Higher is Better"] = 1/data["time_infer_s"]
+        data[x] = data["Samples per Second (Inference), Higher is Better"] * seconds_per_dollar
+        plot_boxplot(
+            data=data,
+            x=x,
+            y="framework",
+            title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
+            sort=True,
+            higher_is_better=True,
+            xscale="log",
+            # xlim=(-0.001, 1),
+            save_path=save_path,
         )
 
     def plot_boxplot_champion_loss_delta(self):
+        save_path = self._filename("boxplot_champion_loss_delta.png")
+        x = "Champion Loss Delta (%), Lower is Better"
         data = self.results_ranked_fillna_df[["framework", "bestdiff"]].copy()
-        data["Champion Loss Delta (%), Lower is Better"] = data["bestdiff"] * 100
+        data[x] = data["bestdiff"] * 100
         plot_boxplot(
             data=data,
-            x="Champion Loss Delta (%), Lower is Better",
+            x=x,
             y="framework",
             title="AutoMLBenchmark 2023 Results (104 datasets, 10 folds)",
             sort=True,
             higher_is_better=False,
             xlim=(-0.1, 100),
+            save_path=save_path,
         )
 
-    def plot_pareto_infer_time(self, save_prefix: str):
+    def plot_pareto_time_infer(self):
+        save_path = self._filename("pareto_front_time_infer.png")
         y_name = "Rescaled Accuracy"
         x_name = "Inference Time Per-Row (seconds)"
         title = f"AutoMLBenchmark 2023 Accuracy vs Inference Time (104 datasets, 10-fold)"
@@ -265,10 +342,11 @@ class Plotter:
             max_X=False,
             max_Y=True,
             title=title,
-            save_prefix=save_prefix,
+            save_path=save_path,
         )
 
-    def plot_pareto_train_time(self, save_prefix: str):
+    def plot_pareto_time_train(self):
+        save_path = self._filename("pareto_front_time_train.png")
         y_name = "Rescaled Accuracy"
         x_name = "Train Time (seconds)"
         title = f"AutoMLBenchmark 2023 Accuracy vs Train Time (104 datasets, 10-fold)"
@@ -286,8 +364,23 @@ class Plotter:
             max_X=False,
             max_Y=True,
             title=title,
-            save_prefix=save_prefix,
+            save_path=save_path,
         )
+
+    def plot_critical_difference(self):
+        save_path = self._filename("critical_difference.png")
+        from autorank import autorank, plot_stats
+        fig, axes = plt.subplots(1, 1, figsize=(20, 3))
+        data = self.results_ranked_fillna_df.pivot_table(index="dataset", columns="framework", values="metric_error")
+        result = autorank(data, alpha=0.05, verbose=False, order="ascending", force_mode="nonparametric")
+        plot_stats(result, ax=axes, width=8, allow_insignificant=True)
+        # path_figures = f"{benchmark_evaluator.results_dir_output}figures/"
+        # Path(path_figures).mkdir(parents=True, exist_ok=True)
+        # plt.savefig(f"{path_figures}ranks.png")
+        if save_path is not None:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            plt.savefig(save_path)
+        plt.show()
 
 
 # TODO: Fix the input so that everything is in a function and it can be called at the end of `run_eval_autogluon_v1.py`
@@ -296,69 +389,29 @@ if __name__ == '__main__':
     results_dir = 'data/results/output/openml/autogluon_v1/'  # local path
     results_dir_input = results_dir
     results_dir_output = results_dir
-    problem_type = 'all'
+
+    # Price Spot Instance m5.2xlarge (US East Ohio) on May 8th 2022 : $0.0873 / hour
+    price_per_hour = 0.0873
+    hour_per_dollar = 1 / price_per_hour
+    seconds_per_dollar = hour_per_dollar * 3600
+
     for problem_type in [
         "all",
-        # "binary",
-        # "multiclass",
-        # "regression",
+        "binary",
+        "multiclass",
+        "regression",
     ]:
         run_path_prefix = f'4h8c/{problem_type}/'
-        run_path_prefix_overall = f'4h8c_fillna/{problem_type}/'
-
+        run_path_prefix_fillna = f'4h8c_fillna/{problem_type}/'
         results_ranked_df = load_pd.load(f'{results_dir_input}{run_path_prefix}results_ranked_by_dataset_valid.csv')
-        results_ranked_overall_df = load_pd.load(f'{results_dir_input}{run_path_prefix_overall}results_ranked_valid.csv')
-        results_ranked_fillna_df = load_pd.load(f'{results_dir_input}{run_path_prefix_overall}results_ranked_by_dataset_valid.csv')
+        results_ranked_fillna_df = load_pd.load(f'{results_dir_input}{run_path_prefix_fillna}results_ranked_by_dataset_valid.csv')
 
         results_ranked_df['dataset'] = results_ranked_df['dataset'].astype(str)
         results_ranked_fillna_df['dataset'] = results_ranked_fillna_df['dataset'].astype(str)
-        results_ranked_df['rows_per_second'] = 1 / results_ranked_df['time_infer_s']
 
-        frameworks = list(results_ranked_df['framework'].unique())
-        print(frameworks)
-
-        # Price Spot Instance m5.2xlarge (US East Ohio) on May 8th 2022 : $0.0873 / hour
-        price_per_hour = 0.0873
-        hour_per_dollar = 1/price_per_hour
-        second_per_dollar = hour_per_dollar * 3600
-
-        dict_mean = dict()
-        dict_median = dict()
-        dict_stddev = dict()
-        dict_mean_train_s = dict()
-        dict_median_train_s = dict()
-
-        for f in frameworks:
-            b = list(results_ranked_df[results_ranked_df['framework'] == f]['time_infer_s'])
-            c = list(results_ranked_df[results_ranked_df['framework'] == f]['rows_per_second'])
-            # print(f'{f} | {len(b)}')
-            b.sort()
-            # print(b)
-            b_mean = np.mean(b)
-            c_mean = np.mean(c)
-            c_median = np.median(c)
-
-            dict_mean[f] = b_mean
-            b_median = np.median(b)
-            dict_median[f] = b_median
-            dict_stddev[f] = np.std(b)
-            dict_mean_train_s[f] = np.mean(list(results_ranked_df[results_ranked_df['framework'] == f]['time_train_s']))
-            dict_median_train_s[f] = np.median(list(results_ranked_df[results_ranked_df['framework'] == f]['time_train_s']))
-            rows_per_s_mean = 1/b_mean
-            rows_per_s_median = 1/b_median
-            print(f'{f}\t| rows_per_s_mean={round(rows_per_s_mean, 2)} | rows_per_s_median={round(rows_per_s_median, 2)}')
-            # print(f'true_mean {c_mean}')
-            # print(f'true_median {c_median}')
-            rows_per_dollar_mean = rows_per_s_mean * second_per_dollar
-            rows_per_dollar_median = rows_per_s_median*second_per_dollar
-            if rows_per_dollar_median > 1e8:
-                print(f'$1 dollar : {round(rows_per_dollar_median / 1e6)}M')
-            else:
-                print(f'$1 dollar : {round(rows_per_dollar_median/1000)}k')
-            # if rows_per_dollar_mean > 1e8:
-            #     print(f'$1 dollar mean: {round(rows_per_dollar_mean / 1e6)}M')
-            # else:
-            #     print(f'$1 dollar mean: {round(rows_per_dollar_mean/1000)}k')
+        if problem_type != "all":
+            results_ranked_df = results_ranked_df[results_ranked_df["problem_type"] == problem_type]
+            results_ranked_fillna_df = results_ranked_fillna_df[results_ranked_fillna_df["problem_type"] == problem_type]
 
         hue_rename_dict = {
             'Ensemble_AG_FTT_all_bq_mytest24h_2022_09_14_v3': 'AutoGluon Experimental (v0.7), GPU, 24hr',
@@ -399,27 +452,21 @@ if __name__ == '__main__':
             "AutoGluon 0.8.2 (High, 4h8c)",
         ] + framework_order
 
-        results_ranked_overall_df['Framework'] = results_ranked_overall_df['framework'].map(hue_rename_dict).fillna(results_ranked_overall_df['framework'])
-        framework_vals = list(results_ranked_overall_df['Framework'].values)
-        framework_order = [f for f in framework_order if f in framework_vals]
-        framework_other = [f for f in framework_vals if f not in framework_order]
-        framework_other = sorted(framework_other)
-        framework_order += framework_other
-        results_ranked_overall_df['Framework'] = pd.Categorical(results_ranked_overall_df['Framework'], framework_order)
-        results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'])
-        # results_ranked_overall_df = results_ranked_overall_df.sort_values(['Framework'], ascending=True)
-
         plotter = Plotter(
             results_ranked_fillna_df=results_ranked_fillna_df,
             results_ranked_df=results_ranked_df,
-            results_ranked_overall_df=results_ranked_overall_df,
+            save_dir=f"test_out/{problem_type}/"
         )
 
         plotter.plot_boxplot_rescaled_accuracy()
         plotter.plot_boxplot_champion_loss_delta()
         plotter.plot_boxplot_rank()
-        plotter.plot_pareto_infer_time(save_prefix=results_dir_output)
-        plotter.plot_pareto_train_time(save_prefix=f"{results_dir_output}train_time_")
+        plotter.plot_boxplot_time_train()
+        plotter.plot_boxplot_samples_per_second()
+        plotter.plot_boxplot_samples_per_dollar(seconds_per_dollar=seconds_per_dollar)
+        plotter.plot_pareto_time_infer()
+        plotter.plot_pareto_time_train()
+        plotter.plot_critical_difference()
 
         # from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
         # task_metadata = load_task_metadata()
