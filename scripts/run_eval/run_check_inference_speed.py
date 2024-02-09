@@ -257,7 +257,7 @@ def compute_mle_elo(
         if calibration_elo is None:
             calibration_elo = INIT_RATING
         # calibrate random forest to 800
-        elo_scores += (calibration_elo-elo_scores[models["RandomForest (2023, 4h8c)"]])
+        elo_scores += (calibration_elo-elo_scores[models[calibration_framework]])
     return pd.Series(elo_scores, index=models.index).sort_values(ascending=False)
 
 
