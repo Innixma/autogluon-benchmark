@@ -2,10 +2,15 @@
 TODO: Refactor this, it is currently very hacky
 """
 
+import copy
+import math
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import os
+from tqdm import tqdm
+from sklearn.linear_model import LogisticRegression
 
 from autogluon.common.loaders import load_pd
 
@@ -195,6 +200,152 @@ def plot_boxplot(
 
 def aggregate_stats(df, on: str, groupby="framework", method=["mean", "median", "std"]):
     return df[[groupby, on]].groupby(groupby).agg(method)[on]
+
+
+def compute_mle_elo(
+    df,
+    SCALE=400,
+    BASE=10,
+    INIT_RATING=1000,
+    calibration_framework: str = None,
+    calibration_elo: float = None
+) -> pd.Series:
+    """
+    Adapted from ChatBot Arena: https://colab.research.google.com/drive/1KdwokPjirkTmpO_P1WByFNFiqxWQquwH#scrollTo=4_x-vXL4yxvC
+
+    Parameters
+    ----------
+    df
+    SCALE
+    BASE
+    INIT_RATING
+    calibration_framework
+    calibration_elo
+
+    Returns
+    -------
+
+    """
+    models = pd.concat([df["framework_1"], df["framework_2"]]).unique()
+    models = pd.Series(np.arange(len(models)), index=models)
+
+    # duplicate battles
+    df = pd.concat([df, df], ignore_index=True)
+    p = len(models.index)
+    n = df.shape[0]
+
+    X = np.zeros([n, p])
+    X[np.arange(n), models[df["framework_1"]]] = +math.log(BASE)
+    X[np.arange(n), models[df["framework_2"]]] = -math.log(BASE)
+
+    # one A win => two A win
+    Y = np.zeros(n)
+    Y[df["winner"] == "1"] = 1.0
+
+    # one tie => one A win + one B win
+    # find tie + tie (both bad) index
+    tie_idx = df["winner"] == "tie"
+    tie_idx[len(tie_idx)//2:] = False
+    Y[tie_idx] = 1.0
+
+    lr = LogisticRegression(fit_intercept=False)
+    lr.fit(X, Y)
+
+    elo_scores = SCALE * lr.coef_[0] + INIT_RATING
+
+    if calibration_framework is not None:
+        if calibration_elo is None:
+            calibration_elo = INIT_RATING
+        # calibrate random forest to 800
+        elo_scores += (calibration_elo-elo_scores[models["RandomForest (2023, 4h8c)"]])
+    return pd.Series(elo_scores, index=models.index).sort_values(ascending=False)
+
+
+def get_bootstrap_result(battles, func_compute_elo, num_round, rng, func_kwargs=None):
+    rows = []
+    if func_kwargs is None:
+        func_kwargs = {}
+    num_battles = len(battles)
+    for i in tqdm(range(num_round), desc="bootstrap"):
+        indices = rng.integers(num_battles, size=num_battles)
+        battles_new = [battles[i] for i in indices]
+        battles_new = pd.DataFrame(battles_new, columns=["framework_1", "framework_2", "winner"])
+        rows.append(func_compute_elo(battles_new, **func_kwargs))
+    df = pd.DataFrame(rows)
+    return df[df.median().sort_values(ascending=False).index]
+
+
+def compute_elo_ratings(
+    results_ranked_fillna_df: pd.DataFrame,
+    seed: int = 0,
+    calibration_framework=None,
+    calibration_elo=None,
+    INIT_RATING: float = 1000,
+    BOOTSTRAP_ROUNDS: int = 100,
+    SCALE: int = 400,
+    save_path: str = None,
+    show: bool = True,
+):
+    results_ranked_elo = results_ranked_fillna_df[["framework", "dataset", "metric_error"]].copy()
+
+    frameworks = list(results_ranked_elo["framework"].unique())
+    datasets = list(results_ranked_elo["dataset"].unique())
+
+    results_ranked_elo = results_ranked_elo.set_index(["framework", "dataset"], drop=True)["metric_error"]
+
+    battles = []
+    for framework_1 in frameworks:
+        for framework_2 in frameworks:
+            if framework_1 == framework_2:
+                continue
+            for dataset in datasets:
+                error_1 = results_ranked_elo.loc[framework_1, dataset]
+                error_2 = results_ranked_elo.loc[framework_2, dataset]
+                if error_1 < error_2:
+                    winner = "1"
+                elif error_1 > error_2:
+                    winner = "2"
+                else:
+                    winner = "tie"
+
+                battles.append([framework_1, framework_2, winner])
+
+    rng = np.random.default_rng(seed=seed)
+    bootstrap_elo_lu = get_bootstrap_result(
+        battles=battles,
+        func_compute_elo=compute_mle_elo,
+        num_round=BOOTSTRAP_ROUNDS,
+        rng=rng,
+        func_kwargs={
+            "INIT_RATING": INIT_RATING,
+            "SCALE": SCALE,
+            "calibration_framework": calibration_framework,
+            "calibration_elo": calibration_elo,
+        }
+    )
+
+    def visualize_bootstrap_scores(df, title):
+        bars = pd.DataFrame(dict(
+            lower=df.quantile(.025),
+            rating=df.quantile(.5),
+            upper=df.quantile(.975))).reset_index(names="model").sort_values("rating", ascending=False)
+        bars['error_y'] = bars['upper'] - bars["rating"]
+        bars['error_y_minus'] = bars['rating'] - bars["lower"]
+        bars['rating_rounded'] = np.round(bars['rating'], 2)
+        fig = px.scatter(bars, x="model", y="rating", error_y="error_y",
+                         error_y_minus="error_y_minus", text="rating_rounded",
+                         title=title)
+        fig.update_layout(xaxis_title="Model", yaxis_title="Rating",
+                          height=600)
+        return fig
+
+    fig = visualize_bootstrap_scores(bootstrap_elo_lu, "Bootstrap of MLE Elo Rating Estimates")
+
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        fig.write_image(save_path)
+    if show:
+        fig.show()
 
 
 class Plotter:
@@ -399,6 +550,28 @@ class Plotter:
         if self.show:
             plt.show()
 
+    def plot_elo_ratings(
+        self,
+        seed: int = 0,
+        calibration_framework=None,
+        calibration_elo=None,
+        INIT_RATING: float = 1000,
+        BOOTSTRAP_ROUNDS: int = 100,
+        SCALE: int = 400,
+    ):
+        save_path = self._filename("elo_ratings.png")
+        compute_elo_ratings(
+            results_ranked_fillna_df=self.results_ranked_fillna_df,
+            seed=seed,
+            calibration_framework=calibration_framework,
+            calibration_elo=calibration_elo,
+            INIT_RATING=INIT_RATING,
+            BOOTSTRAP_ROUNDS=BOOTSTRAP_ROUNDS,
+            SCALE=SCALE,
+            save_path=save_path,
+            show=self.show,
+        )
+
 
 # TODO: Fix the input so that everything is in a function and it can be called at the end of `run_eval_autogluon_v1.py`
 if __name__ == '__main__':
@@ -410,6 +583,8 @@ if __name__ == '__main__':
     price_per_hour = 0.0873
     hour_per_dollar = 1 / price_per_hour
     seconds_per_dollar = hour_per_dollar * 3600
+
+    plotter_root_dir = "test_out3/"
 
     for problem_type in [
         "all",
@@ -432,7 +607,7 @@ if __name__ == '__main__':
         plotter = Plotter(
             results_ranked_fillna_df=results_ranked_fillna_df,
             results_ranked_df=results_ranked_df,
-            save_dir=f"test_out/{problem_type}/",
+            save_dir=f"{plotter_root_dir}{problem_type}/",
             show=True,
         )
 
@@ -445,17 +620,13 @@ if __name__ == '__main__':
         plotter.plot_pareto_time_infer()
         plotter.plot_pareto_time_train()
         plotter.plot_critical_difference()
+        plotter.plot_elo_ratings(
+            calibration_framework="RandomForest (2023, 4h8c)",
+            calibration_elo=800,
+        )
 
-        # from autogluon_benchmark.metadata.metadata_loader import load_task_metadata
-        # task_metadata = load_task_metadata()
-        # task_metadata['tid'] = task_metadata['tid'].astype(str)
-        # task_metadata['dataset'] = task_metadata['name']
-        # plot_1(results_ranked_df, task_metadata=task_metadata)
-
-    from autogluon.common.utils.s3_utils import upload_s3_folder, upload_file
-
-    # upload_s3_folder(bucket="autogluon-zeroshot", prefix="autogluon_v1/", folder_to_upload="data/results/output/openml/autogluon_v1/")
-    import shutil
-
-    shutil.make_archive("results", 'zip', "data/results/output/openml/autogluon_v1")
-    upload_file(file_name="results.zip", bucket="autogluon-zeroshot", prefix="autogluon_v1")
+    # from autogluon.common.utils.s3_utils import upload_s3_folder, upload_file
+    # upload_s3_folder(bucket="autogluon-zeroshot", prefix="autogluon_v1/", folder_to_upload=plotter_root_dir)
+    # import shutil
+    # shutil.make_archive("results", 'zip', plotter_root_dir)
+    # upload_file(file_name="results.zip", bucket="autogluon-zeroshot", prefix="autogluon_v1")
