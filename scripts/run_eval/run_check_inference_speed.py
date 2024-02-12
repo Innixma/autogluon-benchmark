@@ -340,7 +340,7 @@ def compute_elo_ratings(
                          error_y_minus="error_y_minus", text="rating_rounded",
                          title=title)
         fig.update_layout(xaxis_title="Model", yaxis_title="Rating",
-                          height=600)
+                          height=1000, width=1600)
         return fig
 
     fig = visualize_bootstrap_scores(bootstrap_elo_lu, "Bootstrap of MLE Elo Rating Estimates")
