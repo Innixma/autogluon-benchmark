@@ -261,16 +261,20 @@ def compute_mle_elo(
     return pd.Series(elo_scores, index=models.index).sort_values(ascending=False)
 
 
-def get_bootstrap_result(battles, func_compute_elo, num_round, rng, func_kwargs=None):
+def get_bootstrap_result(battles, func_compute_elo, num_round, rng, func_kwargs=None, skip_bootstrap: bool = False):
     rows = []
     if func_kwargs is None:
         func_kwargs = {}
     num_battles = len(battles)
-    for i in tqdm(range(num_round), desc="bootstrap"):
-        indices = rng.integers(num_battles, size=num_battles)
-        battles_new = [battles[i] for i in indices]
-        battles_new = pd.DataFrame(battles_new, columns=["framework_1", "framework_2", "winner"])
-        rows.append(func_compute_elo(battles_new, **func_kwargs))
+    if skip_bootstrap:
+        battles = pd.DataFrame(battles, columns=["framework_1", "framework_2", "winner"])
+        rows.append(func_compute_elo(battles, **func_kwargs))
+    else:
+        for i in tqdm(range(num_round), desc="bootstrap"):
+            indices = rng.integers(num_battles, size=num_battles)
+            battles_new = [battles[i] for i in indices]
+            battles_new = pd.DataFrame(battles_new, columns=["framework_1", "framework_2", "winner"])
+            rows.append(func_compute_elo(battles_new, **func_kwargs))
     df = pd.DataFrame(rows)
     return df[df.median().sort_values(ascending=False).index]
 
