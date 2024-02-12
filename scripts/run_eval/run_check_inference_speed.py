@@ -278,6 +278,21 @@ def get_bootstrap_result(battles, func_compute_elo, num_round, rng, func_kwargs=
     df = pd.DataFrame(rows)
     return df[df.median().sort_values(ascending=False).index]
 
+def visualize_bootstrap_scores(df, title):
+    bars = pd.DataFrame(dict(
+        lower=df.quantile(.025),
+        rating=df.quantile(.5),
+        upper=df.quantile(.975))).reset_index(names="model").sort_values("rating", ascending=False)
+    bars['error_y'] = bars['upper'] - bars["rating"]
+    bars['error_y_minus'] = bars['rating'] - bars["lower"]
+    bars['rating_rounded'] = np.round(bars['rating'], 2)
+    fig = px.scatter(bars, x="model", y="rating", error_y="error_y",
+                     error_y_minus="error_y_minus", text="rating_rounded",
+                     title=title)
+    fig.update_layout(xaxis_title="Model", yaxis_title="Rating",
+                      height=1000, width=1600)
+    return fig
+
 
 def compute_elo_ratings(
     results_ranked_fillna_df: pd.DataFrame,
@@ -327,21 +342,6 @@ def compute_elo_ratings(
             "calibration_elo": calibration_elo,
         }
     )
-
-    def visualize_bootstrap_scores(df, title):
-        bars = pd.DataFrame(dict(
-            lower=df.quantile(.025),
-            rating=df.quantile(.5),
-            upper=df.quantile(.975))).reset_index(names="model").sort_values("rating", ascending=False)
-        bars['error_y'] = bars['upper'] - bars["rating"]
-        bars['error_y_minus'] = bars['rating'] - bars["lower"]
-        bars['rating_rounded'] = np.round(bars['rating'], 2)
-        fig = px.scatter(bars, x="model", y="rating", error_y="error_y",
-                         error_y_minus="error_y_minus", text="rating_rounded",
-                         title=title)
-        fig.update_layout(xaxis_title="Model", yaxis_title="Rating",
-                          height=1000, width=1600)
-        return fig
 
     fig = visualize_bootstrap_scores(bootstrap_elo_lu, "Bootstrap of MLE Elo Rating Estimates")
 
