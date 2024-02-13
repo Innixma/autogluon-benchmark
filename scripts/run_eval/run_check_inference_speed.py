@@ -4,6 +4,7 @@ TODO: Refactor this, it is currently very hacky
 
 import copy
 import math
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -261,19 +262,16 @@ def compute_mle_elo(
     return pd.Series(elo_scores, index=models.index).sort_values(ascending=False)
 
 
-def get_bootstrap_result(battles, func_compute_elo, num_round, rng, func_kwargs=None, skip_bootstrap: bool = False):
+def get_bootstrap_result(battles: pd.DataFrame, func_compute_elo, rng, num_round: int = None, func_kwargs=None):
     rows = []
     if func_kwargs is None:
         func_kwargs = {}
-    num_battles = len(battles)
-    if skip_bootstrap:
-        battles = pd.DataFrame(battles, columns=["framework_1", "framework_2", "winner"])
+    if num_round is None:
         rows.append(func_compute_elo(battles, **func_kwargs))
     else:
+        num_battles = len(battles)
         for i in tqdm(range(num_round), desc="bootstrap"):
-            indices = rng.integers(num_battles, size=num_battles)
-            battles_new = [battles[i] for i in indices]
-            battles_new = pd.DataFrame(battles_new, columns=["framework_1", "framework_2", "winner"])
+            battles_new = battles.sample(n=num_battles, replace=True, random_state=rng, axis=0)
             rows.append(func_compute_elo(battles_new, **func_kwargs))
     df = pd.DataFrame(rows)
     return df[df.median().sort_values(ascending=False).index]
@@ -294,6 +292,37 @@ def visualize_bootstrap_scores(df, title):
     return fig
 
 
+def calc_battle_outcome(error_1: float, error_2: float) -> str:
+    if error_1 < error_2:
+        winner = "1"
+    elif error_1 > error_2:
+        winner = "2"
+    else:
+        winner = "tie"
+    return winner
+
+
+def convert_results_to_battles(
+    results_df: pd.DataFrame,
+    frameworks: List[str] = None,
+    datasets: List[str] = None,
+) -> pd.DataFrame:
+    results_df = results_df[["framework", "dataset", "metric_error"]]
+    if datasets is not None:
+        results_df = results_df[results_df["dataset"].isin(datasets)]
+    if frameworks is not None:
+        results_df = results_df[results_df["framework"].isin(frameworks)]
+    results_pairs_df = pd.merge(results_df, results_df, on="dataset", suffixes=('_1', '_2'))
+    results_pairs_df = results_pairs_df[results_pairs_df["framework_1"] != results_pairs_df["framework_2"]]
+    results_pairs_df["winner"] = [
+        calc_battle_outcome(
+            error_1=error_1,
+            error_2=error_2,
+        ) for error_1, error_2 in zip(results_pairs_df["metric_error_1"], results_pairs_df["metric_error_2"])
+    ]
+    return results_pairs_df[["framework_1", "framework_2", "winner", "dataset"]]
+
+
 def compute_elo_ratings(
     results_ranked_fillna_df: pd.DataFrame,
     seed: int = 0,
@@ -305,30 +334,7 @@ def compute_elo_ratings(
     save_path: str = None,
     show: bool = True,
 ):
-    results_ranked_elo = results_ranked_fillna_df[["framework", "dataset", "metric_error"]].copy()
-
-    frameworks = list(results_ranked_elo["framework"].unique())
-    datasets = list(results_ranked_elo["dataset"].unique())
-
-    results_ranked_elo = results_ranked_elo.set_index(["framework", "dataset"], drop=True)["metric_error"]
-
-    battles = []
-    for framework_1 in frameworks:
-        for framework_2 in frameworks:
-            if framework_1 == framework_2:
-                continue
-            for dataset in datasets:
-                error_1 = results_ranked_elo.loc[framework_1, dataset]
-                error_2 = results_ranked_elo.loc[framework_2, dataset]
-                if error_1 < error_2:
-                    winner = "1"
-                elif error_1 > error_2:
-                    winner = "2"
-                else:
-                    winner = "tie"
-
-                battles.append([framework_1, framework_2, winner])
-
+    battles = convert_results_to_battles(results_df=results_ranked_fillna_df)
     rng = np.random.default_rng(seed=seed)
     bootstrap_elo_lu = get_bootstrap_result(
         battles=battles,
@@ -575,6 +581,89 @@ class Plotter:
             save_path=save_path,
             show=self.show,
         )
+
+
+def compute_elo_ratings_dataset_contribution(
+    results_ranked_fillna_df: pd.DataFrame,
+    seed: int = 0,
+    calibration_framework=None,
+    calibration_elo=None,
+    INIT_RATING: float = 1000,
+    BOOTSTRAP_ROUNDS: int = None,
+    SCALE: int = 400,
+    save_path: str = None,
+    show: bool = True,
+):
+    datasets = list(results_ranked_fillna_df["dataset"].unique())
+
+    elo_gaps = []
+    n_datasets = len(datasets)
+
+    for i in range(n_datasets):
+        battles = convert_results_to_battles(results_ranked_fillna_df, datasets=datasets)
+
+        rng = np.random.default_rng(seed=seed)
+        bootstrap_elo_lu = get_bootstrap_result(
+            battles=battles,
+            func_compute_elo=compute_mle_elo,
+            num_round=None,
+            rng=rng,
+            func_kwargs={
+                "INIT_RATING": INIT_RATING,
+                "SCALE": SCALE,
+                "calibration_framework": calibration_framework,
+                "calibration_elo": calibration_elo,
+            }
+        )
+
+        bars = pd.DataFrame(dict(
+            lower=bootstrap_elo_lu.quantile(.025),
+            rating=bootstrap_elo_lu.quantile(.5),
+            upper=bootstrap_elo_lu.quantile(.975))).sort_values("rating", ascending=False)
+
+        framework_elo_to_track = "AutoGluon 1.0 (Best, 4h8c)"
+        elo_to_track = bars.loc[framework_elo_to_track]["rating"]
+        bars_without_elo_to_track = bars[bars.index != framework_elo_to_track]
+        max_rating_without_track = bars_without_elo_to_track["rating"].max()
+        elo_gap = elo_to_track - max_rating_without_track
+        elo_gaps.append(elo_gap)
+        print(f"{elo_gaps[-1]} | {elo_gaps}")
+
+        elo_impact_by_dataset_list = []
+        for dataset_to_skip in datasets:
+            battles_w_dataset_removed = battles[battles["dataset"] != dataset_to_skip]
+            bootstrap_elo_lu_w_dataset_removed = get_bootstrap_result(
+                battles=battles_w_dataset_removed,
+                func_compute_elo=compute_mle_elo,
+                num_round=None,
+                rng=rng,
+                func_kwargs={
+                    "INIT_RATING": INIT_RATING,
+                    "SCALE": SCALE,
+                    "calibration_framework": calibration_framework,
+                    "calibration_elo": calibration_elo,
+                }
+            )
+            bars_by_dataset = pd.DataFrame(dict(
+                rating=bootstrap_elo_lu_w_dataset_removed.quantile(.5),
+            ))
+
+            delta = bars["rating"] - bars_by_dataset["rating"]
+            delta.name = dataset_to_skip
+            elo_impact_by_dataset_list.append(delta)
+        elo_impact_by_dataset = pd.concat(elo_impact_by_dataset_list, axis=1)
+
+        best_dataset = elo_impact_by_dataset.T[framework_elo_to_track].idxmax()
+        datasets = [d for d in datasets if d != best_dataset]
+        print(f"REMOVING BEST DATASET: {best_dataset} | {len(datasets)} remain...")
+
+    fig = visualize_bootstrap_scores(bootstrap_elo_lu, "Bootstrap of MLE Elo Rating Estimates")
+
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        fig.write_image(save_path)
+    if show:
+        fig.show()
 
 
 # TODO: Fix the input so that everything is in a function and it can be called at the end of `run_eval_autogluon_v1.py`
