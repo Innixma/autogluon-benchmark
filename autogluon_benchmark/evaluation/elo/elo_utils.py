@@ -67,7 +67,7 @@ def compute_mle_elo(
     return pd.Series(elo_scores, index=models.index).sort_values(ascending=False)
 
 
-def get_bootstrap_result(battles: pd.DataFrame, func_compute_elo, rng, num_round: int = None, func_kwargs=None):
+def get_bootstrap_result(battles: pd.DataFrame, func_compute_elo, rng=None, num_round: int = None, func_kwargs=None):
     rows = []
     if func_kwargs is None:
         func_kwargs = {}
@@ -110,4 +110,99 @@ def convert_results_to_battles(
             error_2=error_2,
         ) for error_1, error_2 in zip(results_pairs_df["metric_error_1"], results_pairs_df["metric_error_2"])
     ]
+
+    # Avoid counting each battle twice (dedupe A vs B with B vs A)
+    frameworks_unique = list(results_pairs_df["framework_1"].unique())
+    valid_framework_pairs = []
+    for i in range(len(frameworks_unique)):
+        f1 = frameworks_unique[i]
+        for j in range(i+1, len(frameworks_unique)):
+            f2 = frameworks_unique[j]
+            valid_framework_pairs.append((f1, f2))
+    valid_framework_pairs = set(valid_framework_pairs)
+    pairs_to_keep = [
+        (framework_1, framework_2) in valid_framework_pairs for framework_1, framework_2 in zip(results_pairs_df["framework_1"], results_pairs_df["framework_2"])
+    ]
+    results_pairs_df = results_pairs_df.iloc[pairs_to_keep]
     return results_pairs_df[["framework_1", "framework_2", "winner", "dataset"]]
+
+
+def compute_elo_ratings(
+    results_ranked_fillna_df: pd.DataFrame,
+    seed: int = 0,
+    calibration_framework=None,
+    calibration_elo=None,
+    INIT_RATING: float = 1000,
+    BOOTSTRAP_ROUNDS: int = 100,
+    SCALE: int = 400,
+) -> pd.DataFrame:
+    battles = convert_results_to_battles(results_df=results_ranked_fillna_df)
+    rng = np.random.default_rng(seed=seed)
+    bootstrap_elo_lu = get_bootstrap_result(
+        battles=battles,
+        func_compute_elo=compute_mle_elo,
+        num_round=BOOTSTRAP_ROUNDS,
+        rng=rng,
+        func_kwargs={
+            "INIT_RATING": INIT_RATING,
+            "SCALE": SCALE,
+            "calibration_framework": calibration_framework,
+            "calibration_elo": calibration_elo,
+        }
+    )
+    return bootstrap_elo_lu
+
+
+def compute_elo_rating_dataset_contributon(
+    results_ranked_fillna_df: pd.DataFrame,
+    seed: int = 0,
+    calibration_framework=None,
+    calibration_elo=None,
+    INIT_RATING: float = 1000,
+    SCALE: int = 400,
+) -> pd.DataFrame:
+    datasets = list(results_ranked_fillna_df["dataset"].unique())
+    battles = convert_results_to_battles(results_ranked_fillna_df, datasets=datasets)
+
+    rng = np.random.default_rng(seed=seed)
+    bootstrap_elo_lu = get_bootstrap_result(
+        battles=battles,
+        func_compute_elo=compute_mle_elo,
+        num_round=None,
+        rng=rng,
+        func_kwargs={
+            "INIT_RATING": INIT_RATING,
+            "SCALE": SCALE,
+            "calibration_framework": calibration_framework,
+            "calibration_elo": calibration_elo,
+        }
+    )
+
+    bars = pd.DataFrame(dict(
+        rating=bootstrap_elo_lu.quantile(.5),
+    )).sort_values("rating", ascending=False)
+
+    elo_impact_by_dataset_list = []
+    for dataset_to_skip in datasets:
+        battles_w_dataset_removed = battles[battles["dataset"] != dataset_to_skip]
+        bootstrap_elo_lu_w_dataset_removed = get_bootstrap_result(
+            battles=battles_w_dataset_removed,
+            func_compute_elo=compute_mle_elo,
+            num_round=None,
+            rng=rng,
+            func_kwargs={
+                "INIT_RATING": INIT_RATING,
+                "SCALE": SCALE,
+                "calibration_framework": calibration_framework,
+                "calibration_elo": calibration_elo,
+            }
+        )
+        bars_by_dataset = pd.DataFrame(dict(
+            rating=bootstrap_elo_lu_w_dataset_removed.quantile(.5),
+        ))
+
+        delta = bars["rating"] - bars_by_dataset["rating"]
+        delta.name = dataset_to_skip
+        elo_impact_by_dataset_list.append(delta)
+    elo_impact_by_dataset = pd.concat(elo_impact_by_dataset_list, axis=1)
+    return elo_impact_by_dataset
