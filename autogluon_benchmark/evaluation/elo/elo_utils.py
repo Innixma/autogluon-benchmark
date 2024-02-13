@@ -1,3 +1,5 @@
+from typing import List
+
 import math
 
 import numpy as np
@@ -78,3 +80,34 @@ def get_bootstrap_result(battles: pd.DataFrame, func_compute_elo, rng, num_round
             rows.append(func_compute_elo(battles_new, **func_kwargs))
     df = pd.DataFrame(rows)
     return df[df.median().sort_values(ascending=False).index]
+
+
+def calc_battle_outcome(error_1: float, error_2: float) -> str:
+    if error_1 < error_2:
+        winner = "1"
+    elif error_1 > error_2:
+        winner = "2"
+    else:
+        winner = "tie"
+    return winner
+
+
+def convert_results_to_battles(
+    results_df: pd.DataFrame,
+    frameworks: List[str] = None,
+    datasets: List[str] = None,
+) -> pd.DataFrame:
+    results_df = results_df[["framework", "dataset", "metric_error"]]
+    if datasets is not None:
+        results_df = results_df[results_df["dataset"].isin(datasets)]
+    if frameworks is not None:
+        results_df = results_df[results_df["framework"].isin(frameworks)]
+    results_pairs_df = pd.merge(results_df, results_df, on="dataset", suffixes=('_1', '_2'))
+    results_pairs_df = results_pairs_df[results_pairs_df["framework_1"] != results_pairs_df["framework_2"]]
+    results_pairs_df["winner"] = [
+        calc_battle_outcome(
+            error_1=error_1,
+            error_2=error_2,
+        ) for error_1, error_2 in zip(results_pairs_df["metric_error_1"], results_pairs_df["metric_error_2"])
+    ]
+    return results_pairs_df[["framework_1", "framework_2", "winner", "dataset"]]

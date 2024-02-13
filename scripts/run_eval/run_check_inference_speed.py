@@ -14,7 +14,7 @@ from autogluon.common.loaders import load_pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from autogluon_benchmark.evaluation.elo.elo_utils import compute_mle_elo, get_bootstrap_result
+from autogluon_benchmark.evaluation.elo.elo_utils import compute_mle_elo, convert_results_to_battles, get_bootstrap_result
 
 
 def plot_1(data, task_metadata):
@@ -215,37 +215,6 @@ def visualize_bootstrap_scores(df, title):
     fig.update_layout(xaxis_title="Model", yaxis_title="Rating",
                       height=1000, width=1600)
     return fig
-
-
-def calc_battle_outcome(error_1: float, error_2: float) -> str:
-    if error_1 < error_2:
-        winner = "1"
-    elif error_1 > error_2:
-        winner = "2"
-    else:
-        winner = "tie"
-    return winner
-
-
-def convert_results_to_battles(
-    results_df: pd.DataFrame,
-    frameworks: List[str] = None,
-    datasets: List[str] = None,
-) -> pd.DataFrame:
-    results_df = results_df[["framework", "dataset", "metric_error"]]
-    if datasets is not None:
-        results_df = results_df[results_df["dataset"].isin(datasets)]
-    if frameworks is not None:
-        results_df = results_df[results_df["framework"].isin(frameworks)]
-    results_pairs_df = pd.merge(results_df, results_df, on="dataset", suffixes=('_1', '_2'))
-    results_pairs_df = results_pairs_df[results_pairs_df["framework_1"] != results_pairs_df["framework_2"]]
-    results_pairs_df["winner"] = [
-        calc_battle_outcome(
-            error_1=error_1,
-            error_2=error_2,
-        ) for error_1, error_2 in zip(results_pairs_df["metric_error_1"], results_pairs_df["metric_error_2"])
-    ]
-    return results_pairs_df[["framework_1", "framework_2", "winner", "dataset"]]
 
 
 def compute_elo_ratings(
