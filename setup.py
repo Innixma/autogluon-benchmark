@@ -6,9 +6,11 @@ requirements = [
     'pandas',
     'openml>=0.14.1',
     's3fs',
-    'autogluon',
+    'autogluon.core>=1.0',
     # 'autogluon.bench',
     'pyyaml',
+    'autorank<2',
+    'kaleido<1',
 ]
 
 setup(

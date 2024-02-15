@@ -14,6 +14,7 @@ def plot_boxplot(
     higher_is_better: bool = True,
     xlim: tuple = None,
     xscale: str = None,
+    palette: str = "husl",
     save_path: str = None,
     show: bool = True,
 ):
@@ -30,6 +31,7 @@ def plot_boxplot(
         y=y,
         x=x,
         order=order,
+        palette=palette,
     )
     if xlim is not None:
         ax.set(xlim=xlim)
