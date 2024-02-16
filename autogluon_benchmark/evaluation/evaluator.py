@@ -15,17 +15,21 @@ class Evaluator:
         self,
         df_processed: pd.DataFrame,
         frameworks: List[str] | None = None,
+        frameworks_compare_vs_all: List[str] | str | None = "auto",
         framework_fillna: str | None = None,
         frameworks_rename: Dict[str, str] | None = None,
         task_metadata: pd.DataFrame | None = None,
         clean_data: bool | str = "auto",
         folds: List[int] | None = None,
+        verbose: bool = True,
     ):
         self.frameworks = frameworks
+        self.frameworks_compare_vs_all = frameworks_compare_vs_all
         self.framework_fillna = framework_fillna
         self.frameworks_rename = frameworks_rename
         self.task_metadata = task_metadata
         self.folds = folds
+        self.verbose = verbose
         self.df_processed = df_processed
         if clean_data == "auto":
             clean_data = self.task_metadata is not None
@@ -52,10 +56,12 @@ class Evaluator:
         return evaluate(
             paths=df_processed,
             frameworks_run=self.frameworks,
+            frameworks_compare_vs_all=self.frameworks_compare_vs_all,
             framework_nan_fill=framework_fillna,
             task_metadata=self.task_metadata,
             clean_data=self.clean_data,  # FIXME
             folds_to_keep=self.folds,
+            verbose=self.verbose,
         )
 
     def to_plotter(
