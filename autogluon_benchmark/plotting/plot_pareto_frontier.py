@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -90,6 +91,18 @@ def plot_pareto_aggregated(
 ):
     if data_x is None:
         data_x = data
+    if x_name not in data_x:
+        raise AssertionError(f"Missing x_name='{x_name}' column in data_x")
+    elif not is_numeric_dtype(data_x[x_name]):
+        raise AssertionError(f"x_name='{x_name}' must be a numeric dtype")
+    elif data_x[x_name].isnull().values.any():
+        raise AssertionError(f"x_name='{x_name}' cannot contain NaN values")
+    if y_name not in data:
+        raise AssertionError(f"Missing y_name='{y_name}' column in data")
+    elif not is_numeric_dtype(data[y_name]):
+        raise AssertionError(f"y_name='{y_name}' must be a numeric dtype")
+    elif data[y_name].isnull().values.any():
+        raise AssertionError(f"y_name='{y_name}' cannot contain NaN values")
     y_vals = aggregate_stats(df=data, on=y_name, method=[y_method])[y_method]
     x_vals = aggregate_stats(df=data_x, on=x_name, method=[x_method])[x_method]
     if include_method_in_axis_name:

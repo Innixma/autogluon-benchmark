@@ -38,10 +38,10 @@ class Evaluator:
 
     @classmethod
     def from_raw(cls, df_raw: pd.DataFrame, preprocessor_kwargs: dict | None = None, **kwargs):
-        from autogluon_benchmark.preprocessing.preprocessor import Preprocessor
+        from autogluon_benchmark.preprocessing.amlb_preprocessor import AMLBPreprocessor
         if preprocessor_kwargs is None:
             preprocessor_kwargs = dict()
-        df_processed = Preprocessor(df_raw=df_raw, **preprocessor_kwargs).df_processed
+        df_processed = AMLBPreprocessor(**preprocessor_kwargs).transform(df=df_raw)
         return cls(df_processed=df_processed, **kwargs)
 
     def _evaluate(
