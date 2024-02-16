@@ -58,6 +58,7 @@ class Evaluator:
             frameworks_run=self.frameworks,
             frameworks_compare_vs_all=self.frameworks_compare_vs_all,
             framework_nan_fill=framework_fillna,
+            frameworks_rename=self.frameworks_rename,
             task_metadata=self.task_metadata,
             clean_data=self.clean_data,  # FIXME
             folds_to_keep=self.folds,
