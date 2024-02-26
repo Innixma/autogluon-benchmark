@@ -12,6 +12,15 @@ cd autogluon
 cd ..
 ```
 
+Install AutoGluon Bench if running evaluation code.
+```
+git clone https://github.com/autogluon/autogluon-bench.git
+cd autogluon-bench
+pip install -e .
+cd ..
+```
+
+Install AutoGluon Benchmark
 ```
 # Install autogluon-benchmark
 git clone https://github.com/Innixma/autogluon-benchmark.git

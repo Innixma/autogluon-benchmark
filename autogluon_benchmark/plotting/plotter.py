@@ -251,11 +251,13 @@ class Plotter:
             fig.write_image(save_path)
         if self.show:
             fig.show()
+        return bootstrap_elo_lu
 
     def plot_all(
         self,
         calibration_framework: str = None,
         calibration_elo: float = None,
+        BOOTSTRAP_ROUNDS: int = 100,
     ):
         self.plot_boxplot_rescaled_accuracy()
         self.plot_boxplot_champion_loss_delta()
@@ -268,4 +270,5 @@ class Plotter:
         self.plot_elo_ratings(
             calibration_framework=calibration_framework,
             calibration_elo=calibration_elo,
+            BOOTSTRAP_ROUNDS=BOOTSTRAP_ROUNDS,
         )
