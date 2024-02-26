@@ -29,6 +29,10 @@ if __name__ == '__main__':
     show = True
     BOOTSTRAP_ROUNDS = 1000  # Reduce this for a faster execution. Use 1000 for the final plot.
 
+    path_prefix = "../../../v1_results/"
+    amlb_2023_raw = load_pd.load(f"{path_prefix}amlb_2023.csv")
+    autogluon_v1_raw = load_pd.load(f"{path_prefix}autogluon_v1_ablation.parquet")
+
     framework_name_suffix = f'_{constraint}_gp3_amlb_2023'
     frameworks_run_amlb = [
         # 'AutoGluon_benchmark',
@@ -111,9 +115,6 @@ if __name__ == '__main__':
     }
 
     output_prefix = "autogluon_v1"
-
-    amlb_2023_raw = load_pd.load("../../../v1_results/amlb_2023.csv")
-    autogluon_v1_raw = load_pd.load("../../../v1_results/autogluon_v1_ablation.parquet")
 
     df_processed_autogluon_v1: pd.DataFrame = AMLBPreprocessor(framework_suffix="2024_02_22").transform(df=autogluon_v1_raw)
     df_processed_amlb_2023: pd.DataFrame = AMLBPreprocessor(framework_suffix="amlb_2023").transform(df=amlb_2023_raw)
