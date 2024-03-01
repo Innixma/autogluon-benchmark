@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 
 from autogluon.bench.eval.scripts.run_evaluation_openml import evaluate
@@ -29,9 +31,9 @@ if __name__ == '__main__':
     show = True
     BOOTSTRAP_ROUNDS = 1000  # Reduce this for a faster execution. Use 1000 for the final plot.
 
-    path_prefix = "../../../v1_results/"
-    amlb_2023_raw = load_pd.load(f"{path_prefix}amlb_2023.csv")
-    autogluon_v1_raw = load_pd.load(f"{path_prefix}autogluon_v1_ablation.parquet")
+    path_prefix = str(Path(__file__).parent)
+    amlb_2023_raw = load_pd.load(f"{path_prefix}/amlb_2023.csv")
+    autogluon_v1_raw = load_pd.load(f"{path_prefix}/autogluon_v1_ablation.parquet")
 
     framework_name_suffix = f'_{constraint}_gp3_amlb_2023'
     frameworks_run_amlb = [
@@ -114,7 +116,8 @@ if __name__ == '__main__':
         "AutoGluon_bq_noportfolio_4h8c_2024_02_22": "AutoGluon (Best, 4h8c)",
     }
 
-    output_prefix = "autogluon_v1"
+    results_dir = f"{str(Path(__file__).parent / 'data' / 'results')}"
+    output_prefix = "tabrepo_v1"
 
     df_processed_autogluon_v1: pd.DataFrame = AMLBPreprocessor(framework_suffix="2024_02_22").transform(df=autogluon_v1_raw)
     df_processed_amlb_2023: pd.DataFrame = AMLBPreprocessor(framework_suffix="amlb_2023").transform(df=amlb_2023_raw)
@@ -126,6 +129,7 @@ if __name__ == '__main__':
 
     evaluate_kwargs = dict(
         paths=df_processed,
+        results_dir=results_dir,
         frameworks_run=frameworks_run,
         treat_folds_as_datasets=treat_folds_as_datasets,
         infer_batch_size=infer_batch_size,
