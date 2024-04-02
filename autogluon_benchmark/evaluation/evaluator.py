@@ -17,26 +17,35 @@ class Evaluator:
         frameworks: List[str] | None = None,
         frameworks_compare_vs_all: List[str] | str | None = "auto",
         framework_fillna: str | None = None,
+        worst_fillna: bool = False,
         frameworks_rename: Dict[str, str] | None = None,
         task_metadata: pd.DataFrame | None = None,
         clean_data: bool | str = "auto",
         folds: List[int] | None = None,
         verbose: bool = True,
+        **kwargs,
     ):
         self.frameworks = frameworks
         self.frameworks_compare_vs_all = frameworks_compare_vs_all
         self.framework_fillna = framework_fillna
+        self.worst_fillna = worst_fillna
         self.frameworks_rename = frameworks_rename
         self.task_metadata = task_metadata
         self.folds = folds
         self.verbose = verbose
         self.df_processed = df_processed
+        self.kwargs = kwargs
         if clean_data == "auto":
             clean_data = self.task_metadata is not None
         self.clean_data = clean_data
-        self.results = self._evaluate(df_processed=self.df_processed)
-        if self.framework_fillna:
-            self.results_fillna = self._evaluate(df_processed=self.df_processed, framework_fillna=self.framework_fillna)
+        self.results = self._evaluate(df_processed=self.df_processed, **self.kwargs)
+        if self.framework_fillna or self.worst_fillna:
+            self.results_fillna = self._evaluate(
+                df_processed=self.df_processed,
+                framework_fillna=self.framework_fillna,
+                worst_fillna=self.worst_fillna,
+                **self.kwargs,
+            )
         else:
             self.results_fillna = None
 
@@ -52,17 +61,21 @@ class Evaluator:
         self,
         df_processed: pd.DataFrame,
         framework_fillna: str | None = None,
+        worst_fillna: bool = False,
+        **kwargs,
     ):
         return evaluate(
             paths=df_processed,
             frameworks_run=self.frameworks,
             frameworks_compare_vs_all=self.frameworks_compare_vs_all,
             framework_nan_fill=framework_fillna,
+            worst_nan_fill=worst_fillna,
             frameworks_rename=self.frameworks_rename,
             task_metadata=self.task_metadata,
             clean_data=self.clean_data,  # FIXME
             folds_to_keep=self.folds,
             verbose=self.verbose,
+            **kwargs,
         )
 
     def to_plotter(
