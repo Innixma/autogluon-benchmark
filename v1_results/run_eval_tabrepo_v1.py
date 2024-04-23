@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from autogluon.bench.eval.scripts.run_evaluation_openml import evaluate
 from autogluon.common.loaders import load_pd
+from autogluon_benchmark.evaluation.evaluator import Evaluator
 from autogluon_benchmark.plotting.plotter import Plotter
 from autogluon_benchmark.preprocessing.amlb_preprocessor import AMLBPreprocessor
 
@@ -127,31 +127,17 @@ if __name__ == '__main__':
         df_processed_autogluon_v1,
     ], ignore_index=True)
 
-    evaluate_kwargs = dict(
-        paths=df_processed,
-        results_dir=results_dir,
-        frameworks_run=frameworks_run,
-        treat_folds_as_datasets=treat_folds_as_datasets,
-        infer_batch_size=infer_batch_size,
-        filter_errors=False,
-        use_tid_as_dataset_name=use_tid_as_dataset_name,
-        task_metadata=task_metadata,
-        banned_datasets=banned_datasets,
+    evaluator = Evaluator(
+        frameworks=frameworks_run,
         frameworks_rename=frameworks_rename,
+        framework_fillna="constantpredictor_1h8c_gp3_amlb_2023",
+        task_metadata=task_metadata,
     )
 
-    _, results_ranked_df, _, _, _ = evaluate(
-        problem_type=problem_types,
-        output_suffix=f'{output_prefix}/{constraint}/all',
-        **evaluate_kwargs,
-    )
-    _, results_ranked_fillna_df, _, _, _ = evaluate(
-        problem_type=problem_types,
-        output_suffix=f'{output_prefix}/{constraint}_fillna/all',
-        framework_nan_fill='constantpredictor_1h8c_gp3_amlb_2023',
-        compute_z_score=False,
-        **evaluate_kwargs,
-    )
+    evaluator_output = evaluator.transform(data=df_processed)
+
+    results_ranked_df = evaluator_output.results_ranked
+    results_ranked_fillna_df = evaluator_output.results_fillna_ranked
 
     plotter = Plotter(
         results_ranked_fillna_df=results_ranked_fillna_df,
