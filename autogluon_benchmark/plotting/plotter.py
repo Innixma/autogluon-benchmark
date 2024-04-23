@@ -1,29 +1,20 @@
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import plotly.express as px
 
+from autogluon.common.savers import save_pd
+
 from .plot_pareto_frontier import plot_pareto_aggregated
 from .plot_boxplot import plot_boxplot
-from ..evaluation.elo.elo_utils import compute_elo_ratings
-
-
-def visualize_bootstrap_scores(df: pd.DataFrame, title: str):
-    bars = pd.DataFrame(dict(
-        lower=df.quantile(.025),
-        rating=df.quantile(.5),
-        upper=df.quantile(.975))).reset_index(names="model").sort_values("rating", ascending=False)
-    bars['error_y'] = bars['upper'] - bars["rating"]
-    bars['error_y_minus'] = bars['rating'] - bars["lower"]
-    bars['rating_rounded'] = np.round(bars['rating'], 2)
-    fig = px.scatter(bars, x="model", y="rating", error_y="error_y",
-                     error_y_minus="error_y_minus", text="rating_rounded",
-                     title=title)
-    fig.update_layout(xaxis_title="Model", yaxis_title="Rating",
-                      height=1000, width=1600)
-    return fig
+from .plotter_utils import (
+    compute_pairwise_win_fraction,
+    plot_winrate_expectation_by_elo,
+    visualize_bootstrap_scores,
+    visualize_pairwise_win_fraction,
+)
+from ..evaluation.elo.elo_utils import compute_elo_ratings, convert_results_to_battles, get_arena_leaderboard
 
 
 class Plotter:
@@ -37,8 +28,11 @@ class Plotter:
         save_dir: str = None,
         show: bool = True,
     ):
-        self.results_ranked_fillna_df = results_ranked_fillna_df
-        self.results_ranked_df = results_ranked_df
+        self.results_ranked_fillna_df = results_ranked_fillna_df.copy()
+        self.results_ranked_df = results_ranked_df.copy()
+        if "fold" in self.results_ranked_fillna_df:
+            self.results_ranked_fillna_df["dataset"] = self.results_ranked_fillna_df["dataset"] + "_" + self.results_ranked_fillna_df["fold"].astype(str)
+            self.results_ranked_df["dataset"] = self.results_ranked_df["dataset"] + "_" + self.results_ranked_df["fold"].astype(str)
         self._verify_integrity()
         self.save_dir = save_dir
         self.show = show
@@ -50,6 +44,20 @@ class Plotter:
             return None
 
     def _verify_integrity(self):
+        expected_columns = [
+            "framework",
+            "dataset",
+            "metric_error",
+            "bestdiff",
+            "loss_rescaled",
+            "rank",
+            "time_train_s",
+            "time_infer_s",
+        ]
+        for column in expected_columns:
+            assert column in self.results_ranked_df
+            assert column in self.results_ranked_fillna_df
+
         unique_frameworks = set(self.results_ranked_fillna_df["framework"].unique())
         unique_datasets = set(self.results_ranked_fillna_df["dataset"].unique())
         assert unique_frameworks == set(self.results_ranked_df["framework"].unique())
@@ -170,7 +178,7 @@ class Plotter:
         save_path = self._filename("pareto_front_time_infer.png")
         y_name = "Rescaled Accuracy"
         x_name = "Inference Time Per-Row (seconds)"
-        title = f"AutoMLBenchmark 2023 Accuracy vs Inference Time (104 datasets, 10-fold)"
+        title = f"Accuracy vs Inference Time"
         data_x = self.results_ranked_df.copy()
         data_x[x_name] = data_x["time_infer_s"]
         data = self.results_ranked_fillna_df.copy()
@@ -193,7 +201,7 @@ class Plotter:
         save_path = self._filename("pareto_front_time_train.png")
         y_name = "Rescaled Accuracy"
         x_name = "Train Time (seconds)"
-        title = f"AutoMLBenchmark 2023 Accuracy vs Train Time (104 datasets, 10-fold)"
+        title = f"Accuracy vs Train Time"
         data_x = self.results_ranked_df.copy()
         data_x[x_name] = data_x["time_train_s"]
         data = self.results_ranked_fillna_df.copy()
@@ -244,14 +252,69 @@ class Plotter:
             BOOTSTRAP_ROUNDS=BOOTSTRAP_ROUNDS,
             SCALE=SCALE,
         )
-        fig = visualize_bootstrap_scores(bootstrap_elo_lu, "Bootstrap of MLE Elo Rating Estimates")
+        fig = visualize_bootstrap_scores(bootstrap_elo_lu, "Elo Confidence Intervals on Model Strength (via Bootstrapping)")
 
         if save_path:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             fig.write_image(save_path)
         if self.show:
             fig.show()
+        self._plot_pairwise_winrate_expectation_by_elo(bootstrap_elo_lu=bootstrap_elo_lu)
         return bootstrap_elo_lu
+
+    def _get_arena_leaderboard(self, bootstrap_elo_lu):
+        save_path_markdown = self._filename("leaderboard.md")
+        save_path = self._filename("leaderboard.csv")
+        save_path_pretty = self._filename("leaderboard_pretty.csv")
+        leaderboard, leaderboard_print = get_arena_leaderboard(bootstrap_elo_lu=bootstrap_elo_lu, results_df=self.results_ranked_fillna_df)
+        leaderboard_markdown = leaderboard_print.to_markdown(index=False)
+        from autogluon.common.savers import save_str
+        if save_path:
+            save_pd.save(path=save_path, df=leaderboard)
+            save_pd.save(path=save_path_pretty, df=leaderboard_print)
+            save_str.save(path=save_path_markdown, data=leaderboard_markdown)
+        if self.show:
+            print(leaderboard_markdown)
+        return leaderboard, leaderboard_print
+
+    def _plot_pairwise_winrate_expectation_by_elo(self, bootstrap_elo_lu):
+        save_path = self._filename("pairwise_winrate_expectation_by_elo.png")
+        fig = plot_winrate_expectation_by_elo(bootstrap_elo_lu=bootstrap_elo_lu)
+        if save_path is not None:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            fig.write_image(save_path)
+        if self.show:
+            fig.show()
+
+    def plot_pairwise_winrate(self):
+        save_path = self._filename("pairwise_winrate.png")
+        battles = convert_results_to_battles(results_df=self.results_ranked_fillna_df)
+        fig = visualize_pairwise_win_fraction(battles=battles, title="Fraction of Model A Wins for All A vs. B Battles")
+        if save_path is not None:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            fig.write_image(save_path)
+        if self.show:
+            fig.show()
+
+    def plot_average_winrate(self):
+        save_path = self._filename("average_winrate.png")
+        battles = convert_results_to_battles(results_df=self.results_ranked_fillna_df)
+        row_beats_col_freq = compute_pairwise_win_fraction(battles=battles)
+        fig = px.bar(
+            row_beats_col_freq.mean(axis=1).sort_values(ascending=False),
+            title="Average Win Rate Against All Other Models (Assuming Uniform Sampling)",
+            text_auto=".2f",
+        )
+        fig.update_layout(
+            yaxis_title="Average Win Rate",
+            xaxis_title="Model",
+            showlegend=False,
+        )
+        if save_path is not None:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            fig.write_image(save_path)
+        if self.show:
+            fig.show()
 
     def plot_all(
         self,
@@ -267,8 +330,11 @@ class Plotter:
         self.plot_pareto_time_infer()
         self.plot_pareto_time_train()
         self.plot_critical_difference()
-        self.plot_elo_ratings(
+        self.plot_average_winrate()
+        self.plot_pairwise_winrate()
+        bootstrap_elo_lu = self.plot_elo_ratings(
             calibration_framework=calibration_framework,
             calibration_elo=calibration_elo,
             BOOTSTRAP_ROUNDS=BOOTSTRAP_ROUNDS,
         )
+        self._get_arena_leaderboard(bootstrap_elo_lu=bootstrap_elo_lu)
