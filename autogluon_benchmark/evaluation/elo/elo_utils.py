@@ -362,19 +362,22 @@ def get_arena_leaderboard(bootstrap_elo_lu: pd.DataFrame, results_df: pd.DataFra
 
     leaderboard["Rank Avg"] = np.round(leaderboard["mean_rank"], decimals=1)
     leaderboard["Champ Delta %"] = np.round(leaderboard["mean_bestdiff"] * 100, decimals=1)
-    leaderboard["Rescaled Loss"] = np.round(leaderboard["mean_loss_rescaled"], decimals=2)
+    # leaderboard["Champ Delta % 2"] = np.round((1/(1 - leaderboard["mean_bestdiff"]) - 1) * 100, decimals=1)
+    leaderboard["Rescaled Acc"] = np.round(1 - leaderboard["mean_loss_rescaled"], decimals=2)
+    leaderboard["Elo"] = leaderboard["Arena Elo"]
 
     leaderboard_print = leaderboard[[
         "Rank",
         "Model",
-        "Arena Elo",
+        "Elo",
         "95% CI",
         # "Battles",
         # "Wins",
         "Winrate",
-        "Rescaled Loss",
+        "Rescaled Acc",
         # "Rank Avg",
         "Champ Delta %",
+        # "Champ Delta % 2",
     ]]
 
     return leaderboard, leaderboard_print

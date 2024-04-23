@@ -13,7 +13,6 @@ from autogluon_benchmark.plotting.plotter import Plotter
 class Evaluator:
     def __init__(
         self,
-        df_processed: pd.DataFrame,
         frameworks: List[str] | None = None,
         frameworks_compare_vs_all: List[str] | str | None = "auto",
         framework_fillna: str | None = None,
@@ -33,39 +32,33 @@ class Evaluator:
         self.task_metadata = task_metadata
         self.folds = folds
         self.verbose = verbose
-        self.df_processed = df_processed
         self.kwargs = kwargs
         if clean_data == "auto":
             clean_data = self.task_metadata is not None
         self.clean_data = clean_data
-        self.results = self._evaluate(df_processed=self.df_processed, **self.kwargs)
+
+    def transform(self, data: pd.DataFrame) -> EvaluatorOutput:
+        results = self._evaluate(data=data, **self.kwargs)
         if self.framework_fillna or self.worst_fillna:
-            self.results_fillna = self._evaluate(
-                df_processed=self.df_processed,
+            results_fillna = self._evaluate(
+                data=data,
                 framework_fillna=self.framework_fillna,
                 worst_fillna=self.worst_fillna,
                 **self.kwargs,
             )
         else:
-            self.results_fillna = None
-
-    @classmethod
-    def from_raw(cls, df_raw: pd.DataFrame, preprocessor_kwargs: dict | None = None, **kwargs):
-        from autogluon_benchmark.preprocessing.amlb_preprocessor import AMLBPreprocessor
-        if preprocessor_kwargs is None:
-            preprocessor_kwargs = dict()
-        df_processed = AMLBPreprocessor(**preprocessor_kwargs).transform(df=df_raw)
-        return cls(df_processed=df_processed, **kwargs)
+            results_fillna = None
+        return EvaluatorOutput(results=results, results_fillna=results_fillna)
 
     def _evaluate(
         self,
-        df_processed: pd.DataFrame,
+        data: pd.DataFrame,
         framework_fillna: str | None = None,
         worst_fillna: bool = False,
         **kwargs,
     ):
         return evaluate(
-            paths=df_processed,
+            paths=data,
             frameworks_run=self.frameworks,
             frameworks_compare_vs_all=self.frameworks_compare_vs_all,
             framework_nan_fill=framework_fillna,
@@ -89,3 +82,30 @@ class Evaluator:
             save_dir=save_dir,
             show=show,
         )
+
+
+class EvaluatorOutput:
+    def __init__(self, results, results_fillna=None):
+        (
+            self.results_ranked_agg,
+            self.results_ranked,
+            self.results_ranked_all_agg,
+            self.results_ranked_all,
+            self.results_pairs_merged_dict,
+        ) = results
+        if results_fillna:
+            (
+                self.results_fillna_ranked_agg,
+                self.results_fillna_ranked,
+                _,
+                _,
+                self.results_fillna_pairs_merged_dict,
+            ) = results_fillna
+        else:
+            self.results_fillna_ranked_agg = None
+            self.results_fillna_ranked = None
+            self.results_fillna_pairs_merged_dict = None
+
+    @property
+    def has_results_fillna(self):
+        return self.results_fillna_ranked is not None

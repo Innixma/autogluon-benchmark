@@ -178,7 +178,7 @@ class Plotter:
         save_path = self._filename("pareto_front_time_infer.png")
         y_name = "Rescaled Accuracy"
         x_name = "Inference Time Per-Row (seconds)"
-        title = f"AutoMLBenchmark 2023 Accuracy vs Inference Time (104 datasets, 10-fold)"
+        title = f"Accuracy vs Inference Time"
         data_x = self.results_ranked_df.copy()
         data_x[x_name] = data_x["time_infer_s"]
         data = self.results_ranked_fillna_df.copy()
@@ -201,7 +201,7 @@ class Plotter:
         save_path = self._filename("pareto_front_time_train.png")
         y_name = "Rescaled Accuracy"
         x_name = "Train Time (seconds)"
-        title = f"AutoMLBenchmark 2023 Accuracy vs Train Time (104 datasets, 10-fold)"
+        title = f"Accuracy vs Train Time"
         data_x = self.results_ranked_df.copy()
         data_x[x_name] = data_x["time_train_s"]
         data = self.results_ranked_fillna_df.copy()
