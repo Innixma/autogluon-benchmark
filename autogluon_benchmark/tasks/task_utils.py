@@ -5,7 +5,7 @@ from openml.exceptions import OpenMLServerException
 
 
 def get_task(task_id: int):
-    task = openml.tasks.get_task(task_id)
+    task = openml.tasks.get_task(task_id, download_splits=False)
     return task
 
 
