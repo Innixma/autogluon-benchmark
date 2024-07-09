@@ -64,6 +64,15 @@ class Experiment:
         )
 
 
+@dataclass
+class DummyExperiment(Experiment):
+    """
+    Dummy Experiment class that doesn't perform caching and simply runs the run_fun and returns the result.
+    """
+    def data(self, ignore_cache: bool = False):
+        return self.run_fun()
+
+
 # TODO: Cleanup this code
 def fit_ag(task: AutoGluonTaskWrapper, fold: int, task_name: str, fit_args: dict, method: str, verbose: bool = False):
     print(f"Running Task Name: '{task_name}' on fold {fold} with method '{method}'")
@@ -85,7 +94,7 @@ def fit_ag(task: AutoGluonTaskWrapper, fold: int, task_name: str, fit_args: dict
     out.pop("predictions")
     out.pop("probabilities")
     out.pop("truth")
-    out.pop("others")
+    out.pop("others")  # "others" contains predictor object
 
     df_results = pd.DataFrame([out])
     ordered_columns = ["dataset", "fold", "framework", "test_error", "val_error", "eval_metric", "test_score", "val_score", "time_fit"]
@@ -97,17 +106,28 @@ def fit_ag(task: AutoGluonTaskWrapper, fold: int, task_name: str, fit_args: dict
 # TODO: Cleanup this code, make it into a class?
 def run_experiments(
     *,
-    out_dir: str,
+    expname: str,
     tids: List[int],
     folds: List[int],
     methods: List[str],
     methods_dict: dict,
     task_metadata: pd.DataFrame,
     ignore_cache: bool,
-):
+    exec_func: Callable = fit_ag,
+    exec_func_kwargs: dict = None,
+    cache_class: Callable | None = Experiment,
+    cache_class_kwargs: dict = None,
+) -> list:
+    if exec_func_kwargs is None:
+        exec_func_kwargs = {}
+    if cache_class is None:
+        cache_class = DummyExperiment
+    if cache_class_kwargs is None:
+        cache_class_kwargs = {}
     dataset_names = [task_metadata[task_metadata["tid"] == tid]["name"].iloc[0] for tid in tids]
     print(
-        f"Fitting {len(tids)} datasets and {len(folds)} folds for a total of {len(tids) * len(folds)} tasks"
+        f"Running Experiments for expname: '{expname}'..."
+        f"\n\tFitting {len(tids)} datasets and {len(folds)} folds for a total of {len(tids) * len(folds)} tasks"
         f"\n\tFitting {len(methods)} methods on {len(tids) * len(folds)} tasks for a total of {len(tids) * len(folds) * len(methods)} jobs..."
         f"\n\tTIDs    : {tids}"
         f"\n\tDatasets: {dataset_names}"
@@ -122,12 +142,20 @@ def run_experiments(
             for method in methods:
                 cache_name = f"data/tasks/{tid}/{fold}/{method}/results"
                 fit_args = methods_dict[method]
-                experiment = Experiment(
-                    expname=out_dir, name=cache_name,
-                    run_fun=lambda: fit_ag(task=task, fold=fold, task_name=task_name, fit_args=fit_args, method=method),
+                experiment = cache_class(
+                    expname=expname,
+                    name=cache_name,
+                    run_fun=lambda: exec_func(
+                        task=task,
+                        fold=fold,
+                        task_name=task_name,
+                        fit_args=fit_args,
+                        method=method,
+                        **exec_func_kwargs
+                    ),
+                    **cache_class_kwargs,
                 )
                 out = experiment.data(ignore_cache=ignore_cache)
                 result_lst.append(out)
 
-    df_results = pd.concat(result_lst, ignore_index=True)
-    return df_results
+    return result_lst

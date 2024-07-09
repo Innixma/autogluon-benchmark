@@ -16,7 +16,7 @@ def get_tiny_task_metadata(task_metadata: pd.DataFrame):
 
 
 if __name__ == '__main__':
-    out_dir = "./results_learning_curves"  # folder location of all experiment artifacts
+    expname = "./results_learning_curves"  # folder location of all experiment artifacts
     ignore_cache = False  # set to True to overwrite existing caches and re-run experiments from scratch
 
     task_metadata = load_task_metadata('task_metadata.csv')
@@ -57,15 +57,26 @@ if __name__ == '__main__':
     for key in methods_dict:
         methods_dict[key].update(shared_args)
 
-    df_results = run_experiments(
-        out_dir=out_dir,
+    results_lst = run_experiments(
+        expname=expname,
         tids=tids,
         folds=folds,
         methods=methods,
         methods_dict=methods_dict,
         task_metadata=task_metadata,
         ignore_cache=ignore_cache,
+
+        # Uncomment if you want to get a results_lst that isn't a list of pandas DataFrames but arbitrary objects.
+        #  Note that this will remove the caching functionality, as it falls back to "DummyExperiment" class.
+        #  To retain the caching functionality, implement a custom `Experiment` class that can cache the custom object.
+        # cache_class=None,
+        # cache_class_kwargs=...,
+
+        # Set exec_func if you want to do logic different from `fit_ag`, such as returning a non-DataFrame output artifact.
+        # exec_func=...,
+        # exec_func_kwargs=...,
     )
+    df_results = pd.concat(results_lst, ignore_index=True)
 
     df_results = df_results.rename(columns=dict(
         time_fit="time_train_s",
@@ -81,7 +92,7 @@ if __name__ == '__main__':
         columns_to_agg_extra=["time_infer_s"],
     )
 
-    output_path = f"{out_dir}/output"
+    output_path = f"{expname}/output"
     save_pd.save(path=f"{output_path}/results.csv", df=df_results)
     save_pd.save(path=f"{output_path}/results_ranked.csv", df=results_ranked)
     save_pd.save(path=f"{output_path}/results_ranked_by_dataset.csv", df=results_ranked_by_dataset)
