@@ -55,7 +55,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
 
     is_classification = predictor.problem_type in ['binary', 'multiclass']
 
-    predictor.persist_models('best')
+    predictor.persist('best')
 
     if is_classification:
         with Timer() as timer_predict:
@@ -89,7 +89,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
 
     models_count = len(leaderboard)
 
-    predictor.unpersist_models('all')
+    predictor.unpersist('all')
 
     return result(
         predictions=predictions,
