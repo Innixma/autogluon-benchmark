@@ -262,10 +262,12 @@ def predict_win_rate(elo_ratings: dict, SCALE=400, BASE=10):
 def _fix_missing(df, missing_A, missing_B):
     df = df.copy()
     for b in missing_B:
-        df[b] = 0
+        if b not in df:
+            df[b] = 0
     df = df.T
     for a in missing_A:
-        df[a] = 0
+        if a not in df:
+            df[a] = 0
     df = df.T
     return df
 
@@ -296,6 +298,8 @@ def compute_pairwise_win_fraction(battles, max_num_models=30) -> pd.DataFrame:
     num_battles_ptbl = pd.pivot_table(battles,
         index=MODEL_A, columns=MODEL_B, aggfunc="size", fill_value=0)
 
+    missing_A = unique_all
+    missing_B = unique_all
     a_win_ptbl = _fix_missing(df=a_win_ptbl, missing_A=missing_A, missing_B=missing_B)
     b_win_ptbl = _fix_missing(df=b_win_ptbl, missing_A=missing_A, missing_B=missing_B)
     tie_missing_A = [a for a in unique_all if a not in tie_ptbl.index]

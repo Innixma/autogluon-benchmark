@@ -321,6 +321,7 @@ class Plotter:
         calibration_framework: str = None,
         calibration_elo: float = None,
         BOOTSTRAP_ROUNDS: int = 100,
+        plot_critical_difference: bool = True,
     ):
         self.plot_boxplot_rescaled_accuracy()
         self.plot_boxplot_champion_loss_delta()
@@ -329,7 +330,8 @@ class Plotter:
         self.plot_boxplot_samples_per_second()
         self.plot_pareto_time_infer()
         self.plot_pareto_time_train()
-        self.plot_critical_difference()
+        if plot_critical_difference:
+            self.plot_critical_difference()
         self.plot_average_winrate()
         self.plot_pairwise_winrate()
         bootstrap_elo_lu = self.plot_elo_ratings(
