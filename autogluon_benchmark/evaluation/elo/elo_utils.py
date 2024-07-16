@@ -337,6 +337,7 @@ def get_arena_leaderboard(bootstrap_elo_lu: pd.DataFrame, results_df: pd.DataFra
     for f, win_val in [(MODEL_A, "1"), (MODEL_B, "2")]:
         counts = battles[f].value_counts().to_dict()
         win_counts = battles[[f, "winner"]].value_counts().reset_index()
+        win_counts["count"] = win_counts["count"].astype(float)
         win_counts.loc[win_counts["winner"] == "tie", "count"] *= 0.5
         win_counts = win_counts.loc[win_counts["winner"].isin([win_val, "tie"]), :]
         win_counts = win_counts.drop(columns=["winner"]).groupby(f)["count"].sum().to_dict()
