@@ -321,6 +321,7 @@ class Plotter:
         calibration_framework: str = None,
         calibration_elo: float = None,
         BOOTSTRAP_ROUNDS: int = 100,
+        plot_elo_ratings: bool = True,
         plot_critical_difference: bool = True,
     ):
         self.plot_boxplot_rescaled_accuracy()
@@ -334,9 +335,10 @@ class Plotter:
             self.plot_critical_difference()
         self.plot_average_winrate()
         self.plot_pairwise_winrate()
-        bootstrap_elo_lu = self.plot_elo_ratings(
-            calibration_framework=calibration_framework,
-            calibration_elo=calibration_elo,
-            BOOTSTRAP_ROUNDS=BOOTSTRAP_ROUNDS,
-        )
-        self._get_arena_leaderboard(bootstrap_elo_lu=bootstrap_elo_lu)
+        if plot_elo_ratings:
+            bootstrap_elo_lu = self.plot_elo_ratings(
+                calibration_framework=calibration_framework,
+                calibration_elo=calibration_elo,
+                BOOTSTRAP_ROUNDS=BOOTSTRAP_ROUNDS,
+            )
+            self._get_arena_leaderboard(bootstrap_elo_lu=bootstrap_elo_lu)
