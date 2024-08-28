@@ -64,7 +64,7 @@ class OpenMLTaskWrapper:
 
     def get_train_test_split(self, repeat=0, fold=0, sample=0, train_indices=None, test_indices=None):
         if train_indices is None or test_indices is None:
-            train_indices, test_indices = self.task.get_train_test_split_indices(repeat=repeat, fold=fold, sample=sample)
+            train_indices, test_indices = self.get_split_indices(repeat=repeat, fold=fold, sample=sample)
         X_train = self.X.loc[train_indices]
         y_train = self.y[train_indices]
         X_test = self.X.loc[test_indices]
