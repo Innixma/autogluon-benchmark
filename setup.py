@@ -9,6 +9,7 @@ requirements = [
     'autogluon.core>=1.0',
     'autogluon.tabular>=1.0',
     # 'autogluon.bench',
+    'typing_extensions',
     'pyyaml',
     'autorank<2',
     'kaleido<1',

@@ -1,10 +1,12 @@
 import pandas as pd
 from openml.tasks.task import OpenMLSupervisedTask
+from typing_extensions import Self
 
 from autogluon.common.savers import save_pd, save_json
 
 from .task_utils import get_task_data, get_ag_problem_type, get_task_with_retry
 from ..frameworks.autogluon.run import run
+from ..metadata.metadata_loader import load_task_metadata
 
 
 class OpenMLTaskWrapper:
@@ -16,9 +18,20 @@ class OpenMLTaskWrapper:
         self.label = self.task.target_name
 
     @classmethod
-    def from_task_id(cls, task_id: int):
+    def from_task_id(cls, task_id: int) -> Self:
         task = get_task_with_retry(task_id=task_id)
         return cls(task)
+
+    @classmethod
+    def from_name(cls, dataset: str, task_metadata: pd.DataFrame = None) -> Self:
+        if task_metadata is None:
+            task_metadata = load_task_metadata()
+        assert "name" in task_metadata, f"`name` column missing in task_metadata! Columns: {list(task_metadata.columns)}"
+        assert "tid" in task_metadata, f"`tid` column missing in task_metadata! Columns: {list(task_metadata.columns)}"
+        assert task_metadata.value_counts("name").max() == 1, (f"Duplicate names found in task_metadata! "
+                                                               f"This shouldn't occur: {task_metadata.value_counts('name')}")
+        task_id = task_metadata.set_index("name").loc[dataset, "tid"]
+        return cls.from_task_id(task_id=task_id)
 
     @property
     def task_id(self) -> int:

@@ -127,7 +127,7 @@ def run_experiments(
     dataset_names = [task_metadata[task_metadata["tid"] == tid]["name"].iloc[0] for tid in tids]
     print(
         f"Running Experiments for expname: '{expname}'..."
-        f"\n\tFitting {len(tids)} datasets and {len(folds)} folds for a total of {len(tids) * len(folds)} tasks"
+        f"\n\tFitting {len(tids)} datasets and {len(folds)} folds for a total of {len(tids) * len(folds)} tasks..."
         f"\n\tFitting {len(methods)} methods on {len(tids) * len(folds)} tasks for a total of {len(tids) * len(folds) * len(methods)} jobs..."
         f"\n\tTIDs    : {tids}"
         f"\n\tDatasets: {dataset_names}"
