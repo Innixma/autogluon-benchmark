@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+from typing import Tuple
+
 import pandas as pd
 from openml.tasks.task import OpenMLSupervisedTask
 from typing_extensions import Self
 
 from autogluon.common.savers import save_pd, save_json
+from autogluon.core.utils import generate_train_test_split
 
 from .task_utils import get_task_data, get_ag_problem_type, get_task_with_retry
 from ..frameworks.autogluon.run import run
@@ -75,26 +80,80 @@ class OpenMLTaskWrapper:
         train_indices, test_indices = self.task.get_train_test_split_indices(repeat=repeat, fold=fold, sample=sample)
         return train_indices, test_indices
 
-    def get_train_test_split(self, repeat=0, fold=0, sample=0, train_indices=None, test_indices=None):
+    def get_train_test_split(
+        self,
+        repeat=0,
+        fold=0,
+        sample=0,
+        train_indices=None,
+        test_indices=None,
+        train_size=None,
+        test_size=None,
+        random_state: int = 0,
+    ):
         if train_indices is None or test_indices is None:
             train_indices, test_indices = self.get_split_indices(repeat=repeat, fold=fold, sample=sample)
         X_train = self.X.loc[train_indices]
         y_train = self.y[train_indices]
         X_test = self.X.loc[test_indices]
         y_test = self.y[test_indices]
+
+        if train_size is not None:
+            X_train, y_train = self.subsample(X=X_train, y=y_train, size=train_size, random_state=random_state)
+        if test_size is not None:
+            X_test, y_test = self.subsample(X=X_test, y=y_test, size=test_size, random_state=random_state)
+
         return X_train, y_train, X_test, y_test
 
-    def get_train_test_split_combined(self, repeat=0, fold=0, sample=0, train_indices=None, test_indices=None):
+    def subsample(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        size: int | float,
+        random_state: int = 0,
+    ) -> Tuple[pd.DataFrame, pd.Series]:
+        if isinstance(size, int) and size >= len(X):
+            return X, y
+        if isinstance(size, float) and size >= 1:
+            return X, y
+        X, _, y, _ = generate_train_test_split(
+            X=X, y=y, problem_type=self.problem_type, train_size=size, random_state=random_state
+        )
+        return X, y
+
+    def get_train_test_split_combined(
+        self,
+        repeat=0,
+        fold=0,
+        sample=0,
+        train_indices=None,
+        test_indices=None,
+        train_size=None,
+        test_size=None,
+        random_state: int = 0,
+    ):
         X_train, y_train, X_test, y_test = self.get_train_test_split(
             repeat=repeat,
             fold=fold,
             sample=sample,
             train_indices=train_indices,
             test_indices=test_indices,
+            train_size=train_size,
+            test_size=test_size,
+            random_state=random_state,
         )
         train_data = pd.concat([X_train, y_train.to_frame(name=self.label)], axis=1)
         test_data = pd.concat([X_test, y_test.to_frame(name=self.label)], axis=1)
         return train_data, test_data
+
+    def subsample_combined(
+        self,
+        data: pd.DataFrame,
+        size: int | float,
+        random_state: int = 0,
+    ) -> pd.DataFrame:
+        data, _ = self.subsample(X=data, y=data[self.label], size=size, random_state=random_state)
+        return data
 
 
 class AutoGluonTaskWrapper(OpenMLTaskWrapper):
