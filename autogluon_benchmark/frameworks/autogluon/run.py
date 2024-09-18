@@ -60,18 +60,17 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
     if is_classification:
         with Timer() as timer_predict:
             probabilities = predictor.predict_proba(X_test, as_multiclass=True)
-        predictions = probabilities.idxmax(axis=1).to_numpy()
+        predictions = predictor.predict_from_proba(probabilities)
     else:
         with Timer() as timer_predict:
-            predictions = predictor.predict(X_test, as_pandas=False)
+            predictions = predictor.predict(X_test)
         probabilities = None
 
-    # X_test = X_test.copy()
-    # X_test[label] = y_test
-    X_test = pd.concat([X_test, y_test.to_frame(name=label)], axis=1)
-
     eval_metric = predictor.eval_metric.name
-    test_score = predictor.evaluate(X_test, silent=True, auxiliary_metrics=False)[eval_metric]
+    if probabilities is None:
+        test_score = predictor.evaluate_predictions(y_true=y_test, y_pred=predictions, auxiliary_metrics=False)[eval_metric]
+    else:
+        test_score = predictor.evaluate_predictions(y_true=y_test, y_pred=probabilities, auxiliary_metrics=False)[eval_metric]
     test_error = predictor.eval_metric.convert_score_to_error(test_score)
 
     _leaderboard_extra_info = extra_kwargs.get('_leaderboard_extra_info', False)  # whether to get extra model info (very verbose)
@@ -79,7 +78,8 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
     leaderboard_kwargs = dict(extra_info=_leaderboard_extra_info)
     # Disabled leaderboard test data input by default to avoid long running computation, remove 7200s timeout limitation to re-enable
     if _leaderboard_test:
-        leaderboard_kwargs['data'] = X_test
+        test_data = pd.concat([X_test, y_test.to_frame(name=label)], axis=1)
+        leaderboard_kwargs['data'] = test_data
 
     leaderboard = predictor.leaderboard(**leaderboard_kwargs)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
@@ -89,7 +89,7 @@ def run(X_train, y_train, label: str, X_test, y_test, init_args: dict = None, fi
 
     models_count = len(leaderboard)
 
-    predictor.unpersist('all')
+    predictor.unpersist()
 
     return result(
         predictions=predictions,
