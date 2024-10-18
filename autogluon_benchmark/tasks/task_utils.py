@@ -1,20 +1,28 @@
-import openml
+from __future__ import annotations
+
 import time
 
+import openml
+import pandas as pd
+from openml import OpenMLSupervisedTask
 from openml.exceptions import OpenMLServerException
 
 
-def get_task(task_id: int):
-    task = openml.tasks.get_task(task_id, download_splits=False)
-    return task
+def get_task(task_id: int) -> OpenMLSupervisedTask:
+    task = openml.tasks.get_task(
+        task_id,
+        download_splits=False,
+        download_data=True,
+        download_qualities=True,
+        download_features_meta_data=True,
+    )
+    if isinstance(task, OpenMLSupervisedTask):
+        return task
+    else:
+        raise AssertionError(f"Invalid task type: {type(task)}")
 
 
-def get_dataset(task):
-    X, y, _, _ = task.get_dataset().get_data(task.target_name)
-    return X, y
-
-
-def get_ag_problem_type(task):
+def get_ag_problem_type(task: OpenMLSupervisedTask) -> str:
     if task.task_type_id.name == 'SUPERVISED_CLASSIFICATION':
         if len(task.class_labels) > 2:
             problem_type = 'multiclass'
@@ -27,7 +35,7 @@ def get_ag_problem_type(task):
     return problem_type
 
 
-def get_task_with_retry(task_id: int, max_delay_exp: int = 8):
+def get_task_with_retry(task_id: int, max_delay_exp: int = 8) -> OpenMLSupervisedTask:
     delay_exp = 0
     while True:
         try:
@@ -46,6 +54,6 @@ def get_task_with_retry(task_id: int, max_delay_exp: int = 8):
             continue
 
 
-def get_task_data(task):
+def get_task_data(task: OpenMLSupervisedTask) -> tuple[pd.DataFrame, pd.Series]:
     X, y, _, _ = task.get_dataset().get_data(task.target_name)
     return X, y

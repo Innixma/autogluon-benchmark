@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple
-
+import numpy as np
 import pandas as pd
 from openml.tasks.task import OpenMLSupervisedTask
 from typing_extensions import Self
@@ -46,11 +45,11 @@ class OpenMLTaskWrapper:
     def dataset_id(self) -> int:
         return self.task.dataset_id
 
-    def get_split_dimensions(self):
+    def get_split_dimensions(self) -> tuple[int, int, int]:
         n_repeats, n_folds, n_samples = self.task.get_split_dimensions()
         return n_repeats, n_folds, n_samples
 
-    def combine_X_y(self):
+    def combine_X_y(self) -> pd.DataFrame:
         return pd.concat([self.X, self.y.to_frame(name=self.label)], axis=1)
 
     def save_data(self, path: str, file_type='.csv', train_indices=None, test_indices=None):
@@ -76,23 +75,23 @@ class OpenMLTaskWrapper:
         path_full = f"{path}metadata.json"
         save_json.save(path=path_full, obj=metadata)
 
-    def get_split_indices(self, repeat=0, fold=0, sample=0):
-        train_indices, test_indices = self.task.get_train_test_split_indices(repeat=repeat, fold=fold, sample=sample)
+    def get_split_indices(self, fold: int = 0, repeat: int = 0, sample: int = 0) -> tuple[np.ndarray, np.ndarray]:
+        train_indices, test_indices = self.task.get_train_test_split_indices(fold=fold, repeat=repeat, sample=sample)
         return train_indices, test_indices
 
     def get_train_test_split(
         self,
-        repeat=0,
-        fold=0,
-        sample=0,
-        train_indices=None,
-        test_indices=None,
-        train_size=None,
-        test_size=None,
+        fold: int = 0,
+        repeat: int = 0,
+        sample: int = 0,
+        train_indices: np.ndarray = None,
+        test_indices: np.ndarray = None,
+        train_size: int | float = None,
+        test_size: int | float = None,
         random_state: int = 0,
-    ):
+    ) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
         if train_indices is None or test_indices is None:
-            train_indices, test_indices = self.get_split_indices(repeat=repeat, fold=fold, sample=sample)
+            train_indices, test_indices = self.get_split_indices(fold=fold, repeat=repeat, sample=sample)
         X_train = self.X.loc[train_indices]
         y_train = self.y[train_indices]
         X_test = self.X.loc[test_indices]
@@ -111,7 +110,7 @@ class OpenMLTaskWrapper:
         y: pd.Series,
         size: int | float,
         random_state: int = 0,
-    ) -> Tuple[pd.DataFrame, pd.Series]:
+    ) -> tuple[pd.DataFrame, pd.Series]:
         if isinstance(size, int) and size >= len(X):
             return X, y
         if isinstance(size, float) and size >= 1:
@@ -123,18 +122,18 @@ class OpenMLTaskWrapper:
 
     def get_train_test_split_combined(
         self,
-        repeat=0,
-        fold=0,
-        sample=0,
-        train_indices=None,
-        test_indices=None,
-        train_size=None,
-        test_size=None,
+        fold: int = 0,
+        repeat: int = 0,
+        sample: int = 0,
+        train_indices: np.ndarray = None,
+        test_indices: np.ndarray = None,
+        train_size: int | float = None,
+        test_size: int | float = None,
         random_state: int = 0,
-    ):
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         X_train, y_train, X_test, y_test = self.get_train_test_split(
-            repeat=repeat,
             fold=fold,
+            repeat=repeat,
             sample=sample,
             train_indices=train_indices,
             test_indices=test_indices,
@@ -158,14 +157,15 @@ class OpenMLTaskWrapper:
 
 class AutoGluonTaskWrapper(OpenMLTaskWrapper):
     def run(
-            self,
-            repeat: int = 0,
-            fold: int = 0,
-            sample: int = 0,
-            init_args: dict = None,
-            fit_args: dict = None,
-            extra_kwargs: dict = None) -> dict:
-        X_train, y_train, X_test, y_test = self.get_train_test_split(repeat=repeat, fold=fold, sample=sample)
+        self,
+        fold: int = 0,
+        repeat: int = 0,
+        sample: int = 0,
+        init_args: dict = None,
+        fit_args: dict = None,
+        extra_kwargs: dict = None,
+    ) -> dict:
+        X_train, y_train, X_test, y_test = self.get_train_test_split(fold=fold, repeat=repeat, sample=sample)
         out = run(X_train=X_train, y_train=y_train, label=self.label, X_test=X_test, y_test=y_test,
                   init_args=init_args, fit_args=fit_args, extra_kwargs=extra_kwargs, problem_type=self.problem_type)
         out["tid"] = self.task_id
