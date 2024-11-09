@@ -34,7 +34,7 @@ class OpenMLTaskWrapper:
         assert "tid" in task_metadata, f"`tid` column missing in task_metadata! Columns: {list(task_metadata.columns)}"
         assert task_metadata.value_counts("name").max() == 1, (f"Duplicate names found in task_metadata! "
                                                                f"This shouldn't occur: {task_metadata.value_counts('name')}")
-        task_id = task_metadata.set_index("name").loc[dataset, "tid"]
+        task_id = int(task_metadata.set_index("name").loc[dataset, "tid"])
         return cls.from_task_id(task_id=task_id)
 
     @property
