@@ -121,6 +121,7 @@ def aggregate_all(path_prefix,
                   aggregate_zeroshot=False,
                   aggregate_leaderboard=False,
                   aggregate_model_failures=False,
+                  aggregate_info_file_sizes=False,
                   aggregate_logs=False,
                   output_path=None,
                   keep_params=False,
@@ -186,6 +187,22 @@ def aggregate_all(path_prefix,
             print(f'Saving output to "{aggregated_model_failures_path}"')
             save_pd.save(path=aggregated_model_failures_path, df=model_failures_df)
             print(f'Success! Saved output to "{aggregated_model_failures_path}"')
+
+    if aggregate_info_file_sizes:
+        info_file_sizes_df = output_suite_context.aggregate_info_file_sizes()
+        if info_file_sizes_df is not None:
+            aggregated_info_file_sizes_name = f'info/file_sizes{constraint_str}{version_name_str}.csv'
+            aggregated_info_file_sizes_path = f'{output_path}{aggregated_info_file_sizes_name}'
+            print(f'Saving output to "{aggregated_info_file_sizes_path}"')
+            save_pd.save(path=aggregated_info_file_sizes_path, df=info_file_sizes_df)
+            print(f'Success! Saved output to "{aggregated_info_file_sizes_path}"')
+        info_file_sizes_sum_df = output_suite_context.aggregate_info_file_sizes(sum=True)
+        if info_file_sizes_sum_df is not None:
+            aggregated_info_file_sizes_sum_name = f'info/file_sizes_sum{constraint_str}{version_name_str}.csv'
+            aggregated_info_file_sizes_sum_path = f'{output_path}{aggregated_info_file_sizes_sum_name}'
+            print(f'Saving output to "{aggregated_info_file_sizes_sum_path}"')
+            save_pd.save(path=aggregated_info_file_sizes_sum_path, df=info_file_sizes_sum_df)
+            print(f'Success! Saved output to "{aggregated_info_file_sizes_sum_path}"')
 
     results_df = output_suite_context.aggregate_results(results_list=results_df_list)
     output_suite_context.filter_failures()
