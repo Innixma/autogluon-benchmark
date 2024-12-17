@@ -71,18 +71,6 @@ class Evaluator:
             **kwargs,
         )
 
-    def to_plotter(
-        self,
-        save_dir: str | None = None,
-        show: bool = True,
-    ) -> Plotter:
-        return Plotter(
-            results_ranked_df=self.results[1],
-            results_ranked_fillna_df=self.results_fillna[1],
-            save_dir=save_dir,
-            show=show,
-        )
-
 
 class EvaluatorOutput:
     def __init__(self, results, results_fillna=None):
@@ -109,3 +97,20 @@ class EvaluatorOutput:
     @property
     def has_results_fillna(self):
         return self.results_fillna_ranked is not None
+
+    def to_plotter(
+        self,
+        save_dir: str | None = None,
+        show: bool = True,
+    ) -> Plotter:
+        results_ranked_df = self.results_ranked
+        if self.has_results_fillna:
+            results_ranked_fillna_df = self.results_fillna_ranked
+        else:
+            results_ranked_fillna_df = results_ranked_df
+        return Plotter(
+            results_ranked_df=results_ranked_df,
+            results_ranked_fillna_df=results_ranked_fillna_df,
+            save_dir=save_dir,
+            show=show,
+        )
