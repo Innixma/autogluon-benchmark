@@ -241,7 +241,25 @@ class Plotter:
         INIT_RATING: float = 1000,
         BOOTSTRAP_ROUNDS: int = 100,
         SCALE: int = 400,
+        plot_pairwise_winrate_expectation_by_elo: bool = False,
     ):
+        """
+
+        Parameters
+        ----------
+        seed
+        calibration_framework
+        calibration_elo
+        INIT_RATING
+        BOOTSTRAP_ROUNDS
+        SCALE
+        plot_pairwise_winrate_expectation_by_elo: bool, default False
+            If True, will plot the pairwise expected winrate by elo (note: Not the actual winrate!).
+
+        Returns
+        -------
+
+        """
         save_path = self._filename("elo_ratings.png")
         bootstrap_elo_lu = compute_elo_ratings(
             results_ranked_fillna_df=self.results_ranked_fillna_df,
@@ -259,7 +277,8 @@ class Plotter:
             fig.write_image(save_path)
         if self.show:
             fig.show()
-        self._plot_pairwise_winrate_expectation_by_elo(bootstrap_elo_lu=bootstrap_elo_lu)
+        if plot_pairwise_winrate_expectation_by_elo:
+            self._plot_pairwise_winrate_expectation_by_elo(bootstrap_elo_lu=bootstrap_elo_lu)
         return bootstrap_elo_lu
 
     def _get_arena_leaderboard(self, bootstrap_elo_lu):
