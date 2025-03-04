@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+
 import numpy as np
 import pandas as pd
 from openml.tasks.task import OpenMLSupervisedTask
@@ -103,6 +105,19 @@ class OpenMLTaskWrapper:
             X_test, y_test = self.subsample(X=X_test, y=y_test, size=test_size, random_state=random_state)
 
         return X_train, y_train, X_test, y_test
+
+    @classmethod
+    def to_csv_format(cls, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Converts X to the dtypes that it would have if it were saved to a CSV and then loaded.
+        """
+        s_buf = io.StringIO()
+        X_index = X.index
+        X.to_csv(s_buf, index=False)
+        s_buf.seek(0)
+        X = pd.read_csv(s_buf, low_memory=False)
+        X.index = X_index
+        return X
 
     def subsample(
         self,
