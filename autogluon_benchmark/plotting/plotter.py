@@ -282,7 +282,7 @@ class Plotter:
         return bootstrap_elo_lu
 
     def _get_arena_leaderboard(self, bootstrap_elo_lu):
-        save_path_markdown = self._filename("leaderboard.md")
+        save_path_markdown = self._filename("leaderboard_pretty.md")
         save_path = self._filename("leaderboard.csv")
         save_path_pretty = self._filename("leaderboard_pretty.csv")
         leaderboard, leaderboard_print = get_arena_leaderboard(bootstrap_elo_lu=bootstrap_elo_lu, results_df=self.results_ranked_fillna_df)
