@@ -360,4 +360,4 @@ class Plotter:
                 calibration_elo=calibration_elo,
                 BOOTSTRAP_ROUNDS=BOOTSTRAP_ROUNDS,
             )
-            self._get_arena_leaderboard(bootstrap_elo_lu=bootstrap_elo_lu)
+            return self._get_arena_leaderboard(bootstrap_elo_lu=bootstrap_elo_lu)

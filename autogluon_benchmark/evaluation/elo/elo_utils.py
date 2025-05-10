@@ -360,10 +360,12 @@ def get_arena_leaderboard(bootstrap_elo_lu: pd.DataFrame, results_df: pd.DataFra
     leaderboard["Model"] = leaderboard["model"]
     leaderboard = get_rank_confidence(df=leaderboard)
 
-    results_mean_agg = results_df[["framework", "rank", "bestdiff", "loss_rescaled"]].groupby("framework").mean()
+    results_mean_agg = results_df[["framework", "rank", "bestdiff", "loss_rescaled", "time_train_s", "time_infer_s"]].groupby("framework").mean()
     leaderboard["mean_rank"] = leaderboard["model"].map(results_mean_agg["rank"])
     leaderboard["mean_bestdiff"] = leaderboard["model"].map(results_mean_agg["bestdiff"])
     leaderboard["mean_loss_rescaled"] = leaderboard["model"].map(results_mean_agg["loss_rescaled"])
+    leaderboard["time_train_s"] = leaderboard["model"].map(results_mean_agg["time_train_s"])
+    leaderboard["time_infer_s"] = leaderboard["model"].map(results_mean_agg["time_infer_s"])
 
     leaderboard["Rank Avg"] = np.round(leaderboard["mean_rank"], decimals=1)
     leaderboard["Champ Delta %"] = np.round(leaderboard["mean_bestdiff"] * 100, decimals=1)
@@ -372,7 +374,7 @@ def get_arena_leaderboard(bootstrap_elo_lu: pd.DataFrame, results_df: pd.DataFra
     leaderboard["Elo"] = leaderboard["Arena Elo"]
 
     leaderboard_print = leaderboard[[
-        "Rank",
+        # "Rank",
         "Model",
         "Elo",
         "95% CI",
@@ -380,9 +382,12 @@ def get_arena_leaderboard(bootstrap_elo_lu: pd.DataFrame, results_df: pd.DataFra
         # "Wins",
         "Winrate",
         "Rescaled Acc",
-        # "Rank Avg",
+        "Rank Avg",
         "Champ Delta %",
         # "Champ Delta % 2",
+        "time_train_s",
+        "time_infer_s",
+        "mean_rank",
     ]]
 
     return leaderboard, leaderboard_print
