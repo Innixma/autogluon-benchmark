@@ -106,8 +106,14 @@ def convert_results_to_battles(
         results_df = results_df[results_df["dataset"].isin(datasets)]
     if frameworks is not None:
         results_df = results_df[results_df["framework"].isin(frameworks)]
+
+    # Pair each method with every other method on the same task
     results_pairs_df = pd.merge(results_df, results_df, on="dataset", suffixes=('_1', '_2'))
-    results_pairs_df = results_pairs_df[results_pairs_df["framework_1"] != results_pairs_df["framework_2"]]
+
+    # Keep only pairs with different methods
+    mask_diff_method = results_pairs_df["framework_1"] != results_pairs_df["framework_2"]
+    results_pairs_df = results_pairs_df.loc[mask_diff_method].copy()
+
     results_pairs_df["winner"] = [
         calc_battle_outcome(
             error_1=error_1,
