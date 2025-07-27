@@ -31,7 +31,10 @@ def plot_boxplot(
         y=y,
         x=x,
         order=order,
+        hue=y,
+        hue_order=order,
         palette=palette,
+        legend=False,
     )
     if xlim is not None:
         ax.set(xlim=xlim)
